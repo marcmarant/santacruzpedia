@@ -52,6 +52,11 @@ addEventListener('pageshow', () => document.querySelectorAll('form[data-enviando
   f.querySelectorAll('.cargando').forEach(b => { b.classList.remove('cargando'); b.removeAttribute('aria-busy'); });
 }));
 
+// Desplegables que sustituyen a las pestañas en el móvil: al elegir una opción se abre esa página
+document.querySelectorAll('select[data-navegar]').forEach(s => {
+  s.addEventListener('change', () => { location.href = s.value; });
+});
+
 // Cuadros de filtro: <input data-filtro="selector de los elementos a filtrar">
 document.querySelectorAll('input[data-filtro]').forEach(inp => {
   inp.addEventListener('input', () => {

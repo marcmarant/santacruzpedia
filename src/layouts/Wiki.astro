@@ -25,6 +25,13 @@ const cargado = datos().cargado.toLocaleString('es-ES');
 const base = articuloId ? urlArticulo(articuloId) : '';
 const usuario = Astro.locals.usuario;
 const urlPropia = usuario?.colegial_id ? urlDe('colegial', usuario.colegial_id) : null;
+// pestañas del panel de administración (en el móvil se muestran como un desplegable)
+const PESTANAS_ADMIN = [
+  { clave: 'propuestas', texto: 'Propuestas de cambio', url: '/admin' },
+  { clave: 'usuarios', texto: 'Usuarios y accesos', url: '/admin/usuarios' },
+  { clave: 'anadir', texto: 'Añadir registros', url: '/admin/anadir' },
+  { clave: 'modificar', texto: 'Modificar registros', url: '/admin/modificar' },
+] as const;
 ---
 <!doctype html>
 <html lang="es">
@@ -33,12 +40,12 @@ const urlPropia = usuario?.colegial_id ? urlDe('colegial', usuario.colegial_id) 
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{titulo} - Santacruzpedia</title>
   <link rel="icon" href="/logo.png" />
-  <link rel="stylesheet" href="/wiki.css?v=15" />
+  <link rel="stylesheet" href="/wiki.css?v=16" />
   <script is:inline>if (localStorage.dark) document.documentElement.classList.add('dark');</script>
 </head>
 <body class:list={[{ 'modo-admin': admin }]}>
   <header class="top">
-    <a class="brand" href="/"><img src="/logo.png" alt="" /><span><b>Santacruzpedia</b><small>La enciclopedia del Mayor</small></span></a>
+    <a class="brand" href="/" aria-label="Santacruzpedia: portada"><img src="/logo.png" alt="" /><span><b>Santacruzpedia</b><small>La enciclopedia del Mayor</small></span></a>
     <form class="search" action="/buscar"><input name="q" placeholder="Buscar en Santacruzpedia" autocomplete="off" /><button>Buscar</button></form>
     <nav class="cuenta">
       {usuario && (
@@ -46,9 +53,9 @@ const urlPropia = usuario?.colegial_id ? urlDe('colegial', usuario.colegial_id) 
           {urlPropia
             ? <a href={urlPropia} title="Tu artículo"><UserRound class="icono" size={16} /><span>{usuario.nombre}</span></a>
             : <span title="Tu cuenta"><UserRound class="icono" size={16} /><span>{usuario.nombre}</span></span>}
-          <a href="/mis-propuestas" class:list={[{ activo: Astro.url.pathname === '/mis-propuestas' }]}><FilePen class="icono" size={16} /><span>Mis propuestas</span></a>
+          <a href="/mis-propuestas" title="Mis propuestas" class:list={[{ activo: Astro.url.pathname === '/mis-propuestas' }]}><FilePen class="icono" size={16} /><span>Mis propuestas</span></a>
           {usuario.rol === 'moderador' && (
-            <a href="/admin" class:list={[{ activo: admin }]}><ShieldCheck class="icono" size={16} /><span>Administrar</span></a>
+            <a href="/admin" title="Administrar" class:list={[{ activo: admin }]}><ShieldCheck class="icono" size={16} /><span>Administrar</span></a>
           )}
           <form method="post" action="/logout"><button class="enlace" title="Cerrar sesión"><LogOut class="icono" size={16} /><span>Cerrar sesión</span></button></form>
         </>
@@ -82,12 +89,17 @@ const urlPropia = usuario?.colegial_id ? urlDe('colegial', usuario.colegial_id) 
 
     <main id="top">
       {admin ? (
-        <div class="tabs">
-          <a class:list={[{ sel: admin === 'propuestas' }]} href="/admin">Propuestas de cambio</a>
-          <a class:list={[{ sel: admin === 'usuarios' }]} href="/admin/usuarios">Usuarios y accesos</a>
-          <a class:list={[{ sel: admin === 'anadir' }]} href="/admin/anadir">Añadir registros</a>
-          <a class:list={[{ sel: admin === 'modificar' }]} href="/admin/modificar">Modificar registros</a>
-        </div>
+        <>
+          <div class="tabs con-desplegable">
+            {PESTANAS_ADMIN.map(p => <a class:list={[{ sel: admin === p.clave }]} href={p.url}>{p.texto}</a>)}
+          </div>
+          <label class="tabs-movil">
+            <span class="sr">Sección del panel</span>
+            <select data-navegar>
+              {PESTANAS_ADMIN.map(p => <option value={p.url} selected={admin === p.clave}>{p.texto}</option>)}
+            </select>
+          </label>
+        </>
       ) : (
         <div class="tabs">
           <span class="sel">{articuloId ? 'Artículo' : 'Página especial'}</span>
@@ -120,6 +132,6 @@ const urlPropia = usuario?.colegial_id ? urlDe('colegial', usuario.colegial_id) 
     </main>
   </div>
 
-  <script is:inline src="/wiki.js?v=3"></script>
+  <script is:inline src="/wiki.js?v=4"></script>
 </body>
 </html>

@@ -15,4 +15,4 @@ export const articuloDe = (tipo: TipoArticulo, clave: unknown) => wiki().porDato
 
 export const urlNuevo = (titulo: string) => `/articulo/nuevo?titulo=${encodeURIComponent(titulo)}`;
 export const urlColegio = () => urlDe('libre', 'colegio-mayor-santa-cruz') ?? '/';
-export const urlFoto = (colegialId: string) => `/foto/${encodeURIComponent(colegialId)}`;
+export { urlFoto } from './fotos';   // foto principal del artículo del colegial (o silueta)

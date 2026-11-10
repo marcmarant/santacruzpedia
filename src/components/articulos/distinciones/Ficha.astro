@@ -29,8 +29,8 @@ const consejeros = new Set(cursos.flatMap(c => c.consejeros.map(x => x.id)));
 const conConsejo = cursos.filter(c => c.consejeros.length);
 ---
 <Infobox imagen={imagenPrincipal} titulo={articulo.titulo} pie={tipo === 'premio' && ultimo ? `Último galardonado: ${ultimo.col.mote}` : tipo === 'decano' && decanoActual ? `Decano actual: ${decanoActual.mote}` : null}>
-  {tipo === 'premio' && ultimo && <Foto slot="imagen" c={ultimo.col} perezosa={false} />}
-  {tipo === 'decano' && decanoActual && <Foto slot="imagen" c={decanoActual} perezosa={false} />}
+  {tipo === 'premio' && ultimo && <Foto slot="imagen" c={ultimo.col} tam={800} perezosa={false} />}
+  {tipo === 'decano' && decanoActual && <Foto slot="imagen" c={decanoActual} tam={800} perezosa={false} />}
   {tipo !== 'premio' && !decanoActual && <img slot="imagen" src="/logo.png" style="width:140px" alt="" />}
 
   <Fila e="Otorgado por" si><EnlaceArticulo id="colegio-mayor-santa-cruz">Colegio Mayor Santa Cruz</EnlaceArticulo></Fila>

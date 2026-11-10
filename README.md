@@ -30,7 +30,7 @@ En el servidor, con la carpeta del proyecto copiada (sin `node_modules`, `dist` 
     `sudo tar czf archivos-$(date +%F).tgz -C /srv/santacruzpedia archivos`
   - Estructura: `<tipo>/<artículo>/<nombre>-<huella>/` con `original.<jpg|png|webp>` y `1600.webp`, `800.webp`, `320.webp`;
     las fotos subidas que aún no van en ninguna propuesta están en `pendientes/`.
-- La URL de las fotos (`REMOTE_ASSETS`) se fija al compilar: `docker compose build --build-arg REMOTE_ASSETS=http://otro-servidor`.
+- La URL de los planos de las habitaciones (`REMOTE_ASSETS`) se fija al compilar: `docker compose build --build-arg REMOTE_ASSETS=http://otro-servidor`.
 
 ## Cómo funciona un artículo
 
@@ -56,6 +56,12 @@ un nombre propio en la wiki (`Archivo:Nombre.jpg`) y su página en `/archivo/Nom
 - La **foto principal** (la de la ficha) se guarda en cada versión del artículo (`wiki.revision.imagen_id`), así que
   sus cambios se revisan y quedan en el historial. Si un colegial no tiene, se usa su foto de perfil de siempre.
 - Tablas: `wiki.archivo`, `wiki.revision_archivo` (fotos de cada propuesta) y `wiki.archivo_uso` (dónde sale cada una).
+- **Fotos de los colegiales**: son la foto principal de su artículo (`src/lib/fotos.ts`); sin ella sale una silueta.
+  `/foto/<colegial>` redirige a la foto actual.
+- **Importar una carpeta** como fotos principales (cada archivo se llama como el artículo, o como el colegial:
+  `localidad-burgos.jpg`, `2014asno.jpg`; con `creditos.json` opcional): `scripts/importar-fotos.mjs`. En Docker:
+  `sudo docker compose run --rm -v /ruta/carpeta:/importar:ro santacruzpedia node scripts/importar-fotos.mjs /importar`
+  (`--prueba` lo hace y lo deshace; `--reemplazar` cambia también las que ya tienen foto; `--autor "…"` pone el autor).
   Código: `src/lib/archivos.ts`.
 
 ## Edición y moderación

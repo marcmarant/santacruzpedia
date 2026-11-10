@@ -3,8 +3,6 @@ import type { Archivo } from '../../../lib/archivos';
 import type { Colegial, Datos } from '../../../lib/datos';
 import type { Articulo } from '../../../lib/wiki';
 import { fecha, edad, norm, PROVINCIAS, PAISES, PREMIOS, CARGOS } from '../../../lib/formato';
-import { urlFoto } from '../../../lib/urls';
-import { creditoFoto } from '../../../lib/fotos';
 import Infobox from '../../infobox/Infobox.astro';
 import Fila from '../../infobox/Fila.astro';
 import Seccion from '../../infobox/Seccion.astro';
@@ -26,7 +24,6 @@ const homonimos = [...d.cols.values()].filter(x => x.id !== c.id && norm(x.mote)
 // esbozo: faltan datos y nadie ha escrito todavía un texto largo
 const textoLargo = (articulo.contenido?.length ?? 0) > 800;
 const esEsbozo = (!c.nombre || !c.procedencia || !c.estancias.length) && !textoLargo;
-const credito = creditoFoto(c.id);
 const promo = (x: Colegial) => x.promo ? String(x.promo) : 'promoción desconocida';
 ---
 {homonimos.length > 0 && (
@@ -39,8 +36,8 @@ const promo = (x: Colegial) => x.promo ? String(x.promo) : 'promoción desconoci
   <div class="ambox">Este artículo sobre un colegial es un <b>esbozo</b>. Puedes ayudar a Santacruzpedia completando sus datos en la base de datos.</div>
 )}
 
-<Infobox imagen={imagenPrincipal} titulo={articulo.titulo} pie={credito ?? c.nombre ?? c.mote}>
-  <a slot="imagen" href={urlFoto(c.id)} target="_blank"><Foto c={c} perezosa={false} /></a>
+<Infobox imagen={imagenPrincipal} titulo={articulo.titulo} pie={c.nombre ?? c.mote}>
+  <Foto slot="imagen" c={c} perezosa={false} />
   <Fila e="Nombre" v={c.nombre} />
   <Fila e="Mote" si><b>{c.mote}</b></Fila>
   <Fila e="Otros apodos" v={c.apodos.join(', ')} />

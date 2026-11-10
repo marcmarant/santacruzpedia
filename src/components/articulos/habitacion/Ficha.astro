@@ -14,7 +14,7 @@ const imagenPrincipal = Astro.props.imagen ?? null;   // foto principal del art�
 const residente = h.historial.find(x => x.curso === d.actual)?.col;
 ---
 <Infobox imagen={imagenPrincipal} titulo={articulo.titulo} pie={residente ? `Residente actual: ${residente.mote}` : null}>
-  {residente && <Foto slot="imagen" c={residente} perezosa={false} />}
+  {residente && <Foto slot="imagen" c={residente} tam={800} perezosa={false} />}
   <Fila e="Planta" v={h.piso != null ? PISOS[h.piso] : null} />
   <Fila e="Superficie" v={h.superficie ? `${h.superficie} m²` : 'Desconocida'} />
   <Fila e="Residente actual" si>{residente ? <Enlace tipo="colegial" clave={residente.id}>{residente.mote}</Enlace> : 'Vacía'}</Fila>

@@ -3,8 +3,7 @@
 //   2. exige haber iniciado sesión en toda la wiki (salvo las páginas públicas de acceso)
 //   3. /admin solo para moderadores
 import { defineMiddleware } from 'astro:middleware';
-import { asegurarCargado, datos } from './lib/estado';
-import { precargarFotos } from './lib/fotos';
+import { asegurarCargado } from './lib/estado';
 import { limpiarHuerfanos } from './lib/archivos';
 import { usuarioDeSesion } from './lib/auth';
 
@@ -12,7 +11,6 @@ import { usuarioDeSesion } from './lib/auth';
  *  no /archivo/…/800.webp: las fotos subidas son solo para usuarios con sesión) */
 const PUBLICAS = [/^\/login$/, /^\/solicitar-acceso$/, /^\/invitacion\/[^/]+$/, /^\/[^/]+\.(css|js|png|ico|svg|jpg|webp)$/];
 
-let fotosPrecargadas = false;
 let limpiezaProgramada = false;
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
@@ -29,10 +27,6 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   }
 
   await asegurarCargado();
-  if (!fotosPrecargadas) {
-    fotosPrecargadas = true;
-    precargarFotos([...datos().cols.keys()]).catch(() => { fotosPrecargadas = false; });
-  }
   if (!limpiezaProgramada) {
     // fotos subidas que no se usaron en ninguna propuesta: se borran a las 24 h (se mira cada hora)
     limpiezaProgramada = true;

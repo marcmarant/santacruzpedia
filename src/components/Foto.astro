@@ -1,9 +1,10 @@
 ---
-// Foto de un colegial (o silueta si no tiene)
+// Foto de un colegial: la foto principal de su artículo (o una silueta si no tiene). Ver src/lib/fotos.ts.
 import type { Colegial } from '../lib/datos';
-import { urlFoto } from '../lib/urls';
+import type { Tamano } from '../lib/archivos';
+import { urlFoto } from '../lib/fotos';
 
-interface Props { c: Colegial; clase?: string; perezosa?: boolean }
-const { c, clase, perezosa = true } = Astro.props;
+interface Props { c: Colegial; clase?: string; perezosa?: boolean; tam?: Tamano }
+const { c, clase, perezosa = true, tam = 320 } = Astro.props;
 ---
-<img class={clase} loading={perezosa ? 'lazy' : 'eager'} src={urlFoto(c.id)} alt={c.mote} />
+<img class={clase} loading={perezosa ? 'lazy' : 'eager'} src={urlFoto(c.id, tam)} alt={c.mote} />

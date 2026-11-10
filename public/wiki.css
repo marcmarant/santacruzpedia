@@ -146,3 +146,7 @@ button.cargando{filter:brightness(.7);cursor:progress;pointer-events:none}
 button.cargando::before{content:"";width:13px;height:13px;flex:none;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:girar .7s linear infinite}
 @keyframes girar{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){button.cargando::before{animation-duration:2s}}
+/* artículos nuevos propuestos */
+.cabecera-propuestas{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.cabecera-propuestas p{margin:0;flex:1 1 320px}
+.editor .titulo-nuevo{width:100%;padding:7px 10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;font-size:16px}
+.etiqueta-nuevo{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:bold;color:#fff;background:#14866d;border-radius:2px;padding:1px 6px;vertical-align:1px}

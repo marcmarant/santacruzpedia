@@ -7,18 +7,28 @@ import { urlArticulo } from '../lib/urls';
 import Clock from '@lucide/astro/icons/clock';
 import CircleCheck from '@lucide/astro/icons/circle-check';
 import CircleX from '@lucide/astro/icons/circle-x';
+import FilePlus from '@lucide/astro/icons/file-plus';
 
 const propuestas = await misPropuestas(Astro.locals.usuario!.id);
 const cuenta = (e: string) => propuestas.filter(p => p.estado === e).length;
 const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 ---
 <Wiki titulo="Mis propuestas">
-  <p>
-    Aquí puedes seguir los cambios que has propuesto en los artículos. Un moderador los revisa y decide si se publican.
-  </p>
+  {Astro.url.searchParams.get('enviado') === 'articulo' && (
+    <div class="ambox ok"><b>¡Gracias! Tu artículo se ha enviado a revisión.</b> Se publicará cuando un moderador lo apruebe.</div>
+  )}
+  <div class="cabecera-propuestas">
+    <p>
+      Aquí puedes seguir los cambios y artículos que has propuesto. Un moderador los revisa y decide si se publican.
+    </p>
+    <a class="boton primario" href="/articulo/nuevo"><FilePlus class="icono" size={16} />Proponer un artículo nuevo</a>
+  </div>
 
   {propuestas.length === 0 ? (
-    <div class="ambox">Todavía no has propuesto ningún cambio. Para hacerlo, entra en un artículo, abre «Ver código» y pulsa «Editar».</div>
+    <div class="ambox">
+      Todavía no has propuesto nada. Para cambiar un artículo, entra en él, abre «Ver código» y pulsa «Editar»; para
+      crear uno, usa el botón «Proponer un artículo nuevo».
+    </div>
   ) : (
     <>
       <p class="resumen-propuestas">
@@ -32,7 +42,10 @@ const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeSt
           {propuestas.map(p => (
             <tr>
               <td>{fmt(p.fecha)}</td>
-              <td><a href={urlArticulo(p.articulo_id)}>{p.titulo}</a></td>
+              <td>
+                {p.publicado ? <a href={urlArticulo(p.articulo_id)}>{p.titulo}</a> : p.titulo}
+                {p.nuevo && <><br /><small class="nota">Artículo nuevo</small></>}
+              </td>
               <td>
                 {p.resumen ?? <span class="nota">(sin resumen)</span>}
                 <details><summary>Ver el texto propuesto</summary><pre class="codigo">{p.contenido}</pre></details>

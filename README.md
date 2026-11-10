@@ -42,7 +42,12 @@ Cada página `/articulo/<id>` tiene tres partes:
 2. En **`/admin`** el moderador ve las propuestas pendientes con las diferencias resaltadas y las
    **acepta** (pasa a ser `revision_actual` y se recalculan `wiki.enlace` y `wiki.articulo_categoria`)
    o las **rechaza** (con un motivo opcional). Todo queda en `wiki.registro`.
-3. Límites: 10 propuestas por IP y hora, textos de hasta 100 000 caracteres.
+3. **Artículos nuevos:** desde **Mis propuestas → Proponer un artículo nuevo** o pulsando un enlace rojo
+   (`/articulo/nuevo?titulo=…`). Se crea en `wiki.articulo` (tipo `libre`) **sin versión publicada**
+   (`revision_actual` nulo) y con su texto como propuesta pendiente; mientras tanto no aparece en la wiki.
+   Al aprobarlo se publica; si se rechaza, el título queda libre para volver a proponerlo.
+4. Límites: 10 propuestas por usuario y hora (los moderadores no tienen límite), textos de hasta 100 000 caracteres.
+   Cada usuario sigue sus propuestas y el motivo de los rechazos en **Mis propuestas**.
 
 ## Cuentas y acceso
 

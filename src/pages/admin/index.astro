@@ -10,6 +10,9 @@ import X from '@lucide/astro/icons/x';
 import CircleCheck from '@lucide/astro/icons/circle-check';
 import CircleX from '@lucide/astro/icons/circle-x';
 import PartyPopper from '@lucide/astro/icons/party-popper';
+import FilePlus from '@lucide/astro/icons/file-plus';
+import CuerpoArticulo from '../../components/articulos/CuerpoArticulo.astro';
+import { articuloBorrador } from '../../lib/wiki';
 
 const mod = Astro.locals.usuario!;
 let mensaje: { tipo: 'ok' | 'error'; texto: string } | null = null;
@@ -40,7 +43,9 @@ const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeSt
     return (
       <article class="propuesta">
         <header>
-          <a href={urlArticulo(p.articulo_id)}><b>{p.titulo}</b></a>
+          {p.nuevo
+            ? <><span class="etiqueta-nuevo"><FilePlus class="icono" size={14} />Artículo nuevo</span> <b>{p.titulo}</b></>
+            : <a href={urlArticulo(p.articulo_id)}><b>{p.titulo}</b></a>}
           <span class="nota"> · propuesta nº {p.id} de <b>{p.autor}</b>, {fmt(p.fecha)}</span>
           {p.resumen && <div class="resumen">«{p.resumen}»</div>}
         </header>
@@ -50,7 +55,11 @@ const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeSt
             (se compara abajo con la versión actual).
           </div>
         )}
-        <Diff antes={p.contenido_actual ?? ''} despues={p.contenido} />
+        {p.nuevo ? (
+          <div class="vista-previa"><div class="marco"><CuerpoArticulo articulo={articuloBorrador(p.articulo_id, p.titulo, p.contenido)} /></div></div>
+        ) : (
+          <Diff antes={p.contenido_actual ?? ''} despues={p.contenido} />
+        )}
         <details><summary>Ver el texto completo propuesto</summary><pre class="codigo">{p.contenido}</pre></details>
         <form method="post" class="decision">
           <input type="hidden" name="revision" value={p.id} />
@@ -70,7 +79,7 @@ const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeSt
         {recientes.map(r => (
           <tr>
             <td>{r.id}</td>
-            <td><a href={urlArticulo(r.articulo_id)}>{r.titulo}</a></td>
+            <td>{r.publicado ? <a href={urlArticulo(r.articulo_id)}>{r.titulo}</a> : r.titulo}{r.nuevo && <small class="nota"> (artículo nuevo)</small>}</td>
             <td>{r.autor}</td>
             <td>{r.estado === 'aprobada'
               ? <span class="estado ok"><CircleCheck class="icono" size={15} /> Aprobada</span>

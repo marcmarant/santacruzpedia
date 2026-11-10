@@ -25,6 +25,14 @@ export interface Wiki {
   cargado: Date;
 }
 
+/** artículo libre que aún no está publicado (propuesta de artículo nuevo), para mostrar cómo quedaría */
+export const articuloBorrador = (id: string, titulo: string, contenido: string): Articulo => ({
+  id, titulo, tipo: 'libre', contenido,
+  colegial_id: null, curso_id: null, habitacion_id: null, evento_curso: null, evento_nombre: null, tipo_evento_id: null,
+  estudio_id: null, director_id: null, localidad: null, libro_id: null, autor_id: null,
+  revision_actual: null, rev_fecha: null, rev_autor: null,
+});
+
 /** clave para encontrar el artículo de un dato: claveDato('colegial', '2021plato') */
 export const claveDato = (tipo: TipoArticulo, clave: unknown) => `${tipo}:${String(clave)}`;
 
@@ -47,7 +55,7 @@ function claveDeArticulo(a: Articulo): string | null {
 export async function cargarWiki(): Promise<Wiki> {
   const [arts, redirs, antiguos] = await Promise.all([
     consulta<Articulo>(`select a.*, r.contenido, r.fecha as rev_fecha, r.autor as rev_autor
-                        from wiki.articulo a left join wiki.revision r on r.id = a.revision_actual`),
+                        from wiki.articulo a join wiki.revision r on r.id = a.revision_actual`),  // sin publicar (propuestos): fuera
     consulta<{ titulo: string; articulo_id: string }>('select titulo, articulo_id from wiki.redireccion'),
     consulta<{ id_viejo: string; articulo_id: string }>('select id_viejo, articulo_id from wiki.id_antiguo'),
   ]);

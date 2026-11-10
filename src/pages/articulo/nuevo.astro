@@ -1,12 +1,86 @@
 ---
-// Destino de los enlaces rojos: el artículo todavía no existe
+// Proponer un artículo nuevo. También es el destino de los enlaces rojos (?titulo=…).
+// La propuesta queda pendiente y no se ve en la wiki hasta que un moderador la publica.
 import Wiki from '../../layouts/Wiki.astro';
-const titulo = Astro.url.searchParams.get('titulo') ?? '';
-Astro.response.status = 404;
+import CuerpoArticulo from '../../components/articulos/CuerpoArticulo.astro';
+import { wiki } from '../../lib/estado';
+import { resolverTitulo, articuloBorrador } from '../../lib/wiki';
+import { proponerArticulo, LIMITES, LARGO_TITULO } from '../../lib/edicion';
+import { urlArticulo } from '../../lib/urls';
+
+let titulo = (Astro.url.searchParams.get('titulo') ?? '').trim();
+let contenido = '';
+let resumen = '';
+let errores: string[] = [];
+let vistaPrevia = false;
+const desdeEnlace = Astro.request.method === 'GET' && !!titulo;
+
+// si el artículo ya existe (alguien lo publicó desde que se escribió el enlace), se va a él
+if (desdeEnlace) {
+  const r = resolverTitulo(wiki(), titulo);
+  if (r) return Astro.redirect(urlArticulo(r.articulo.id));
+}
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  titulo = String(f.get('titulo') ?? '');
+  contenido = String(f.get('contenido') ?? '');
+  resumen = String(f.get('resumen') ?? '');
+  if (f.get('accion') === 'previa') {
+    vistaPrevia = true;
+  } else {
+    errores = await proponerArticulo({ titulo, contenido, resumen, usuario: Astro.locals.usuario!, ip: Astro.clientAddress ?? null });
+    if (!errores.length) return Astro.redirect('/mis-propuestas?enviado=articulo', 303);
+  }
+}
+
+const borrador = articuloBorrador('vista-previa', titulo.trim() || 'Artículo nuevo', contenido);
 ---
-<Wiki titulo={titulo || 'Artículo nuevo'}>
-  <div class="ambox">
-    Santacruzpedia aún no tiene un artículo llamado <b>{titulo}</b>. Pronto podrás proponerlo desde aquí.
-    Mientras tanto, prueba a <a href={`/buscar?q=${encodeURIComponent(titulo)}`}>buscarlo</a>.
-  </div>
+<Wiki titulo="Proponer un artículo nuevo">
+  {desdeEnlace && (
+    <div class="ambox">
+      Santacruzpedia aún no tiene un artículo llamado <b>{titulo}</b>. Puedes proponerlo aquí, o antes <a href={`/buscar?q=${encodeURIComponent(titulo)}`}>buscar</a> si existe con otro nombre.
+    </div>
+  )}
+  {errores.length > 0 && <div class="ambox error"><b>No se ha podido enviar:</b><ul>{errores.map(e => <li>{e}</li>)}</ul></div>}
+  <p>
+    Escribe el artículo y envíalo a revisión. No se verá en la wiki hasta que un moderador lo apruebe; puedes seguir
+    su estado en <a href="/mis-propuestas">Mis propuestas</a>.
+  </p>
+
+  <form method="post" class="editor">
+    <label for="titulo">Título</label>
+    <input id="titulo" name="titulo" class="titulo-nuevo" value={titulo} maxlength={LARGO_TITULO} required
+      placeholder="Ej.: Fiesta de la Cruz" />
+    <small class="nota">Es lo que se escribe en los enlaces: <code>[[{titulo.trim() || 'Título'}]]</code>.</small>
+
+    <label for="contenido">Texto del artículo</label>
+    <textarea id="contenido" name="contenido" rows="22" maxlength={LIMITES.contenido} spellcheck="true" required
+      placeholder={`**${titulo.trim() || 'Título'}** es…\n\n## Historia\n\n…\n\n[[Categoría:…]]`}>{contenido}</textarea>
+    <details class="ayuda">
+      <summary>Cómo se escribe</summary>
+      <ul>
+        <li><code>**negrita**</code>, <code>*cursiva*</code>, <code>## Sección</code>, <code>- elemento de lista</code></li>
+        <li><code>[[Plato]]</code> enlaza a un artículo; <code>[[Habitación 21|su habitación]]</code> enlaza con otro texto</li>
+        <li><code>[[Categoría:Nombre]]</code> añade el artículo a una categoría</li>
+      </ul>
+    </details>
+    <div class="campos">
+      <label>Resumen <input name="resumen" value={resumen} maxlength={LIMITES.resumen} placeholder="Ej.: artículo sobre la fiesta de mayo" /></label>
+      <label>Firmado como <input value={Astro.locals.usuario?.nombre} disabled /></label>
+    </div>
+    <div class="botones">
+      <button class="primario" name="accion" value="enviar">Enviar a revisión</button>
+      <button name="accion" value="previa" formnovalidate>Vista previa</button>
+      <a href="/mis-propuestas">Cancelar</a>
+    </div>
+  </form>
+
+  {vistaPrevia && (
+    <section class="vista-previa">
+      <h2>Vista previa: {borrador.titulo}</h2>
+      <p class="nota">Así quedaría el artículo. Todavía no se ha enviado.</p>
+      <div class="marco"><CuerpoArticulo articulo={borrador} /></div>
+    </section>
+  )}
 </Wiki>

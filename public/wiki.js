@@ -110,11 +110,22 @@ document.querySelectorAll('[data-panel-fotos]').forEach(panel => {
     return b;
   };
 
-  // foto principal
+  // foto principal: la elegida o, si no hay, la que sale por defecto en la ficha (foto de perfil, sello…)
+  const porDefecto = iniciales.porDefecto;
   const pintarPrincipal = f => {
     campoImagen.value = f ? f.nombre : '';
-    vistaPrincipal.replaceChildren(f ? el('span', { className: 'elegida' }, el('img', { src: f.miniatura, alt: '' }), f.nombre) : el('i', { textContent: 'ninguna' }));
+    if (f) {
+      vistaPrincipal.replaceChildren(el('span', { className: 'elegida' }, el('img', { src: f.miniatura, alt: '' }), f.nombre));
+    } else if (porDefecto) {
+      vistaPrincipal.replaceChildren(el('span', { className: 'elegida por-defecto' },
+        porDefecto.miniatura ? el('img', { src: porDefecto.miniatura, alt: '' }) : null,
+        porDefecto.texto[0].toUpperCase() + porDefecto.texto.slice(1),
+        el('small', { className: 'nota', textContent: ' — si eliges otra foto principal, sustituye a esta en la ficha' })));
+    } else {
+      vistaPrincipal.replaceChildren(el('i', { textContent: 'ninguna' }));
+    }
     quitarPrincipal.hidden = !f;
+    quitarPrincipal.textContent = porDefecto ? `Quitar (volver a ${porDefecto.texto})` : 'Quitar';
   };
   quitarPrincipal.addEventListener('click', () => pintarPrincipal(null));
   pintarPrincipal(iniciales.principal);
@@ -140,24 +151,35 @@ document.querySelectorAll('[data-panel-fotos]').forEach(panel => {
     el('div', {},
       el('b', { textContent: f.nombre }),
       f.descripcion ? el('div', { className: 'nota', textContent: f.descripcion }) : null,
-      aviso ? el('div', { className: 'nota', textContent: aviso }) : null,
-      el('div', { className: 'acciones' },
+      aviso ? el('div', { className: 'hecho', textContent: aviso }) : null,
+      el('div', { className: 'acciones' }, el('span', { className: 'nota', textContent: aviso ? 'Poner también:' : 'Ponerla:' }),
         boton('Poner en el texto', () => ponerEnTexto(f)),
         boton('Añadir a la galería', () => ponerEnGaleria(f)),
         boton('Foto principal', () => pintarPrincipal(f)))));
 
-  // tarjeta de una foto elegida pero aún sin subir: nombre, pie y autor
+  // dónde se puede poner cada foto
+  const DESTINOS = [
+    ['galeria', 'En la galería del artículo', ponerEnGaleria, 'Añadida a la galería.'],
+    ['texto', 'En el texto (donde esté el cursor)', ponerEnTexto, 'Puesta en el texto.'],
+    ['principal', porDefecto ? `Foto principal (sustituye a ${porDefecto.texto})` : 'Foto principal (la de la ficha)', f => pintarPrincipal(f), 'Puesta como foto principal.'],
+    ['solo', 'Solo subirla (la colocaré después)', () => {}, 'Subida: usa los botones para ponerla donde quieras.'],
+  ];
+
+  // tarjeta de una foto elegida pero aún sin subir: dónde va, nombre, pie y autor
   const tarjetaNueva = fichero => {
+    const destino = el('select', {}, ...DESTINOS.map(([v, t]) => el('option', { value: v, textContent: t })));
     const nombre = el('input', { value: fichero.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '), maxLength: 140, required: true });
     const pie = el('input', { maxLength: 500, placeholder: 'Ej.: La mesa presidencial en la cena de gala' });
     const deOtro = el('input', { type: 'checkbox' });
     const autor = el('input', { maxLength: 200, placeholder: 'Nombre del autor', disabled: true });
     deOtro.addEventListener('change', () => { autor.disabled = !deOtro.checked; if (deOtro.checked) autor.focus(); });
     const errores = el('ul', { className: 'errores' });
-    const subir = el('button', { type: 'button', className: 'primario', textContent: 'Subir' });
+    const subir = el('button', { type: 'button', className: 'primario', textContent: 'Subir y añadir' });
+    destino.addEventListener('change', () => { subir.textContent = destino.value === 'solo' ? 'Subir' : 'Subir y añadir'; });
     const li = el('li', { className: 'nueva' },
       el('img', { src: URL.createObjectURL(fichero), alt: '' }),
       el('div', {},
+        el('label', { className: 'destino' }, '¿Dónde va?', destino),
         el('label', {}, 'Nombre', nombre),
         el('label', {}, 'Pie de foto (opcional)', pie),
         el('label', { className: 'casilla' }, deOtro, 'La foto es de otra persona:'), autor,
@@ -175,7 +197,10 @@ document.querySelectorAll('[data-panel-fotos]').forEach(panel => {
         const r = await fetch('/archivo/subir', { method: 'POST', body: datos });
         const res = await r.json().catch(() => ({ errores: [`Error del servidor (${r.status}).`] }));
         if (res.archivo) {
-          li.replaceWith(tarjetaSubida(res.archivo, res.yaExistia ? 'Esta foto ya estaba subida con este nombre; puedes usarla.' : null));
+          const [, , poner, hecho] = DESTINOS.find(d => d[0] === destino.value);
+          poner(res.archivo);
+          const aviso = (res.yaExistia ? `Esta foto ya estaba subida como «${res.archivo.nombre}». ` : '') + hecho;
+          li.replaceWith(tarjetaSubida(res.archivo, aviso));
           return;
         }
         errores.replaceChildren(...(res.errores || ['No se ha podido subir.']).map(t => el('li', { textContent: t })));
@@ -197,7 +222,7 @@ document.querySelectorAll('[data-panel-fotos]').forEach(panel => {
   // aviso si se envía con fotos elegidas que no se han subido
   form.addEventListener('submit', e => {
     if (e.submitter?.value === 'enviar' && lista.querySelector('li.nueva')
-        && !confirm('Hay fotos que has elegido pero no has subido (botón «Subir»). ¿Enviar la propuesta sin ellas?')) e.preventDefault();
+        && !confirm('Hay fotos que has elegido pero no has subido (botón «Subir y añadir»). ¿Enviar la propuesta sin ellas?')) e.preventDefault();
   });
 });
 

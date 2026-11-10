@@ -1,18 +1,23 @@
 ---
 // Apartado «Fotos» del editor (editar un artículo y proponer uno nuevo). La lógica está en wiki.js:
-// cada foto se sube a /archivo/subir y luego se pone en el texto, en la galería o como foto principal.
+// cada foto se sube a /archivo/subir y se pone donde se haya elegido (texto, galería o foto principal).
 // Las fotos subidas y aún pendientes del usuario se listan al cargar (así no se pierden al pulsar «Vista previa»).
 import { vistaArchivo, LIMITES_FOTOS, type Archivo } from '../lib/archivos';
 
 interface Props {
   imagen: Archivo | null;     // foto principal elegida ahora mismo
   subidas: Archivo[];         // fotos pendientes del usuario
+  // imagen que sale en la ficha si no hay foto principal (foto de perfil, sello del colegio…)
+  porDefecto?: { texto: string; miniatura: string | null } | null;
 }
-const { imagen, subidas } = Astro.props;
-const datos = JSON.stringify({ principal: imagen ? vistaArchivo(imagen) : null, subidas: subidas.map(vistaArchivo) });
+const { imagen, subidas, porDefecto = null } = Astro.props;
+const datos = JSON.stringify({ principal: imagen ? vistaArchivo(imagen) : null, subidas: subidas.map(vistaArchivo), porDefecto });
 ---
 <fieldset class="panel-fotos" data-panel-fotos>
   <legend>Fotos</legend>
+  <ol class="pasos">
+    <li>Elige la foto</li><li>Di dónde va</li><li>Pulsa <b>Subir y añadir</b></li><li>Mira cómo queda en <b>Vista previa</b></li>
+  </ol>
   <input type="hidden" name="imagen" value={imagen?.nombre ?? ''} />
   <div class="principal">
     <span class="etiqueta">Foto principal (la de la ficha):</span>

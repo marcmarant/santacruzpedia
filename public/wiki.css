@@ -216,3 +216,10 @@ a.foto-img{display:block;cursor:zoom-in}
 .ficha-archivo th{width:160px;text-align:left}
 @media(max-width:640px){.foto.derecha,.foto.izquierda,.foto.centro,.foto.grande{float:none;width:100%;margin:8px 0 12px}.fotos-panel li{grid-template-columns:80px 1fr}.fotos-panel li>img,.fotos-panel li>.foto-archivo img{width:80px;height:60px}}
 html.dark .marca-pendiente{background:#3d2e00;color:#fc3}
+.panel-fotos .pasos{display:flex;flex-wrap:wrap;gap:4px 22px;margin:0 0 10px;padding-left:18px;font-size:13px;color:var(--mut)}
+.panel-fotos .pasos li{margin:0}
+.panel-fotos .por-defecto{color:var(--mut)}
+.fotos-panel .hecho{color:#14866d;font-weight:bold;font-size:13px;margin-top:4px}
+html.dark .fotos-panel .hecho{color:#3ec9a7}
+.fotos-panel .acciones .nota{align-self:center}
+.editor .fotos-panel label.destino select{display:block;width:100%;padding:5px 7px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;margin-top:2px}

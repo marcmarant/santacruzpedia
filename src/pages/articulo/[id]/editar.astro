@@ -5,10 +5,11 @@ import CuerpoArticulo from '../../../components/articulos/CuerpoArticulo.astro';
 import { wiki } from '../../../lib/estado';
 import { proponerCambio, pendientesDe, LIMITES } from '../../../lib/edicion';
 import { BLOQUES, tipoBloques } from '../../../lib/bloques';
-import { urlArticulo } from '../../../lib/urls';
+import { urlArticulo, urlFoto } from '../../../lib/urls';
 import PanelFotos from '../../../components/PanelFotos.astro';
 import { pendientesDeUsuario, claveNombre } from '../../../lib/archivos';
 import { buscarFoto } from '../../../lib/wikitexto';
+import { fotoColegial } from '../../../lib/fotos';
 
 const articulo = wiki().porId.get(Astro.params.id!);
 if (!articulo) return Astro.rewrite('/404');
@@ -45,6 +46,15 @@ const desactualizada = basadaEn !== articulo.revision_actual;
 const subidas = await pendientesDeUsuario(Astro.locals.usuario!.id);
 const extra = new Map(subidas.map(a => [claveNombre(a.nombre), a]));
 const imagen = imagenNombre ? buscarFoto(wiki(), imagenNombre, extra) : null;
+
+// imagen que sale en la ficha cuando no hay foto principal (para que el panel no diga «ninguna» si sí hay una)
+const tipo = tipoBloques(articulo);
+const porDefecto = articulo.tipo === 'colegial' && articulo.colegial_id
+  ? (await fotoColegial(articulo.colegial_id) ? { texto: 'su foto de perfil', miniatura: urlFoto(articulo.colegial_id) } : null)
+  : tipo === 'colegio' ? { texto: 'el sello del colegio', miniatura: '/logo.png' }
+  : ['premio', 'decano', 'consejero', 'consejo', 'habitacion', 'libro'].includes(tipo)
+    ? { texto: 'la imagen automática de la ficha (último galardonado, residente actual, portada…)', miniatura: null }
+  : null;
 ---
 <Wiki titulo={`Editando «${articulo.titulo}»`} articuloId={articulo.id} pestana="codigo">
   {enviado && (
@@ -76,7 +86,7 @@ const imagen = imagenNombre ? buscarFoto(wiki(), imagenNombre, extra) : null;
         <li>Bloques automáticos de este artículo: {bloques.length ? bloques.map((b, i) => <>{i > 0 && ', '}<code>{`{{${b}}}`}</code></>) : 'ninguno'}</li>
       </ul>
     </details>
-    <PanelFotos imagen={imagen} subidas={subidas.filter(a => !a.en_propuesta)} />
+    <PanelFotos imagen={imagen} subidas={subidas.filter(a => !a.en_propuesta)} porDefecto={porDefecto} />
     <div class="campos">
       <label>Resumen del cambio <input name="resumen" value={resumen} maxlength={LIMITES.resumen} placeholder="Ej.: añado la anécdota de la capea" /></label>
       <label>Firmado como <input value={Astro.locals.usuario?.nombre} disabled /></label>

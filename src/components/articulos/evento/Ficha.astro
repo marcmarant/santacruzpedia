@@ -2,6 +2,7 @@
 import type { Evento, Datos } from '../../../lib/datos';
 import type { Articulo } from '../../../lib/wiki';
 import { fecha } from '../../../lib/formato';
+import { urlArticulo } from '../../../lib/urls';
 import Infobox from '../../infobox/Infobox.astro';
 import Fila from '../../infobox/Fila.astro';
 import Enlace from '../../Enlace.astro';
@@ -11,7 +12,7 @@ const { articulo, e: ev, d } = Astro.props;
 const dir = d.cursos.get(ev.cursoid)?.director;
 const tieneCronica = !!ev.info || /^##\s*cr[oó]nica/im.test(articulo.contenido ?? '');
 ---
-{!tieneCronica && <div class="ambox">No hay crónica de este evento. ¿Estuviste? Pronto podrás proponer el texto desde aquí.</div>}
+{!tieneCronica && <div class="ambox">No hay crónica de este evento. ¿Estuviste? Edita el texto desde <a href={`${urlArticulo(articulo.id)}/codigo`}>aquí</a>.</div>}
 <Infobox titulo={ev.nombre}>
   <Fila e="Curso" si><Enlace tipo="curso" clave={ev.cursoid}>{ev.cursoid}</Enlace></Fila>
   <Fila e="Inicio" v={fecha(ev.inicio)} />

@@ -20,9 +20,14 @@ const pagina = Math.max(0, Number(p.get('pagina')) || 0);
 
 let errores: string[] = [];
 let valores: Valores | null = t && clave ? await obtener(t, clave) : null;
+// Los campos de la clave (p. ej. colegial y curso de una estancia) van bloqueados: cambiarlos no edita el
+// registro sino que lo convierte en otro. Solo se tienen en cuenta si se marca «Cambiar la clave».
+let cambiarClave = false;
 
 if (t && clave && valores && Astro.request.method === 'POST') {
-  const leido = leerFormulario(t, await Astro.request.formData());
+  const f = await Astro.request.formData();
+  cambiarClave = f.get('cambiar_clave') === 'on';
+  const leido = leerFormulario(t, f, { omitir: cambiarClave ? [] : t.clave });
   errores = leido.errores;
   if (!errores.length) {
     const r = await modificar(t, clave, leido.valores, Astro.locals.usuario!);
@@ -87,11 +92,10 @@ const urlLista = (pag: number) => `/admin/modificar?${new URLSearchParams({ tabl
   {t && clave && (
     <>
       <p><a href="/admin/modificar">Todas las tablas</a> · <a href={`/admin/modificar?tabla=${t.nombre}`}>{t.titulo}</a> · <b>{clave.join(' · ')}</b></p>
-      {p.get('nuevo') && <div class="ambox ok">Registro añadido. {p.get('aviso')}</div>}
       {p.get('guardado') && <div class="ambox ok">Cambios guardados.</div>}
       {errores.length > 0 && <div class="ambox error"><b>No se ha guardado:</b><ul>{errores.map(e => <li>{e}</li>)}</ul></div>}
       {!valores && <div class="ambox error">Ese registro no existe.</div>}
-      {valores && <FormularioRegistro tabla={t} valores={valores} boton="Guardar cambios" />}
+      {valores && <FormularioRegistro tabla={t} valores={valores} boton="Guardar cambios" claveBloqueada={!cambiarClave} />}
     </>
   )}
 

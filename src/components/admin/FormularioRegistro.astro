@@ -1,42 +1,49 @@
 ---
 // Formulario generado a partir de la estructura de una tabla (ver src/lib/esquema.ts).
 // Cada campo se llama c_<columna>. Las claves foráneas se muestran como desplegables.
+// Con `claveBloqueada` (al modificar) los campos de la clave primaria salen desactivados: cambiarlos no edita
+// el registro, lo convierte en otro. Se desbloquean marcando «Cambiar la clave» (ver wiki.js).
 import type { Tabla } from '../../lib/esquema';
 import { opcionesReferencia, type Valores } from '../../lib/registros';
 
-interface Props { tabla: Tabla; valores?: Valores; boton: string }
-const { tabla, valores = {}, boton } = Astro.props;
+interface Props { tabla: Tabla; valores?: Valores; boton: string; claveBloqueada?: boolean }
+const { tabla, valores = {}, boton, claveBloqueada = false } = Astro.props;
 
 const opcionesFk = new Map<string, { valor: string; texto: string }[]>();
 for (const c of tabla.columnas) if (c.referencia) opcionesFk.set(c.nombre, await opcionesReferencia(c));
 
 const texto = (v: unknown) => v == null ? '' : v instanceof Date ? v.toISOString().slice(0, 10) : String(v);
+const esClave = (nombre: string) => tabla.clave.includes(nombre);
+// solo tiene sentido la casilla si hay algún campo de la clave que se escriba a mano (no un id autonumérico)
+// (y solo al modificar, que es cuando se pasa `claveBloqueada`)
+const conCasillaClave = Astro.props.claveBloqueada !== undefined && tabla.columnas.some(c => esClave(c.nombre) && !c.automatica);
 ---
 <form method="post" class="formulario-registro">
   {tabla.columnas.map(c => {
     const v = texto(valores[c.nombre]);
     const nombre = `c_${c.nombre}`;
     const opciones = opcionesFk.get(c.nombre) ?? c.opciones;
+    const attrs = conCasillaClave && esClave(c.nombre) ? { 'data-clave': '', disabled: claveBloqueada } : {};
     return (
       <label class:list={[{ ancho: c.tipo === 'texto_largo' }]}>
         <span class="etiqueta">
           {c.etiqueta}{c.obligatoria && <abbr title="Obligatorio">*</abbr>}
-          {tabla.clave.includes(c.nombre) && <small class="nota"> · clave</small>}
+          {esClave(c.nombre) && <small class="nota"> · clave</small>}
         </span>
         {c.automatica ? (
           <input value={v || 'Se asigna automáticamente'} disabled />
         ) : opciones ? (
-          <select name={nombre} required={c.obligatoria}>
+          <select name={nombre} required={c.obligatoria} {...attrs}>
             <option value="">{c.obligatoria ? '— Elige —' : '— Ninguno —'}</option>
             {opciones.map(o => <option value={o.valor} selected={o.valor === v}>{o.texto}</option>)}
           </select>
         ) : c.tipo === 'texto_largo' ? (
-          <textarea name={nombre} rows="5" required={c.obligatoria}>{v}</textarea>
+          <textarea name={nombre} rows="5" required={c.obligatoria} {...attrs}>{v}</textarea>
         ) : c.tipo === 'booleano' ? (
-          <input type="checkbox" name={nombre} checked={valores[c.nombre] === true} />
+          <input type="checkbox" name={nombre} checked={valores[c.nombre] === true} {...attrs} />
         ) : (
           <input
-            name={nombre} value={v} required={c.obligatoria}
+            name={nombre} value={v} required={c.obligatoria} {...attrs}
             type={c.tipo === 'entero' || c.tipo === 'decimal' ? 'number' : c.tipo === 'fecha' ? 'date' : 'text'}
             step={c.tipo === 'decimal' ? 'any' : undefined}
             maxlength={c.longitud ?? undefined}
@@ -46,5 +53,14 @@ const texto = (v: unknown) => v == null ? '' : v instanceof Date ? v.toISOString
       </label>
     );
   })}
+  {conCasillaClave && (
+    <label class="ancho cambiar-clave">
+      <input type="checkbox" name="cambiar_clave" data-desbloquear-clave checked={!claveBloqueada} />
+      <span>
+        <b>Cambiar la clave</b> ({tabla.columnas.filter(c => esClave(c.nombre)).map(c => c.etiqueta.toLowerCase()).join(' y ')})
+        <small class="nota bloque">Ojo: esto no añade un registro nuevo, <b>mueve este</b> a la nueva clave. Para añadir otro, usa «Añadir registros».</small>
+      </span>
+    </label>
+  )}
   <div class="botones"><slot name="ocultos" /><button class="primario">{boton}</button><slot name="extra" /></div>
 </form>

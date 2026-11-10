@@ -52,6 +52,14 @@ addEventListener('pageshow', () => document.querySelectorAll('form[data-enviando
   f.querySelectorAll('.cargando').forEach(b => { b.classList.remove('cargando'); b.removeAttribute('aria-busy'); });
 }));
 
+// «Cambiar la clave» al modificar un registro: activa o desactiva los campos de la clave del formulario
+document.querySelectorAll('input[data-desbloquear-clave]').forEach(casilla => {
+  const campos = casilla.form.querySelectorAll('[data-clave]');
+  const aplicar = () => campos.forEach(c => { c.disabled = !casilla.checked; });
+  casilla.addEventListener('change', aplicar);
+  aplicar();
+});
+
 // Desplegables que sustituyen a las pestañas en el móvil: al elegir una opción se abre esa página
 document.querySelectorAll('select[data-navegar]').forEach(s => {
   s.addEventListener('change', () => { location.href = s.value; });

@@ -57,11 +57,12 @@ export async function obtener(t: Tabla, clave: unknown[]): Promise<Valores | nul
 // ---------- formularios ----------
 
 /** convierte lo que llega del formulario al tipo de cada columna. Devuelve valores y errores */
-export function leerFormulario(t: Tabla, f: FormData, { incluirAutomaticas = false } = {}) {
+export function leerFormulario(t: Tabla, f: FormData, { incluirAutomaticas = false, omitir = [] as string[] } = {}) {
   const valores: Valores = {};
   const errores: string[] = [];
   for (const c of t.columnas) {
     if (c.automatica && !incluirAutomaticas) continue;
+    if (omitir.includes(c.nombre)) continue;   // p. ej. la clave al modificar, si no se ha pedido cambiarla
     const bruto = f.get(`c_${c.nombre}`);
     if (c.tipo === 'booleano') { valores[c.nombre] = bruto === 'on'; continue; }
     const s = bruto == null ? '' : String(bruto).replace(/\r\n/g, '\n');
@@ -131,6 +132,7 @@ export async function insertar(t: Tabla, valores: Valores, u: Usuario): Promise<
 
 export async function modificar(t: Tabla, clave: unknown[], valores: Valores, u: Usuario): Promise<{ error: string | null; clave?: unknown[] }> {
   const cols = Object.keys(valores);
+  if (!cols.length) return { error: 'No hay nada que modificar: todos los campos de esta tabla son parte de la clave. Para cambiarlos, marca «Cambiar la clave».' };
   const whereSelect = t.clave.map((k, i) => `${ident(k)}::text = $${i + 1}`).join(' and ');
   const whereUpdate = t.clave.map((k, i) => `${ident(k)}::text = $${cols.length + i + 1}`).join(' and ');
   const c = await pool.connect();

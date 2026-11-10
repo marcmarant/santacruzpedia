@@ -5,10 +5,12 @@ import SelectorTabla from '../../components/admin/SelectorTabla.astro';
 import FormularioRegistro from '../../components/admin/FormularioRegistro.astro';
 import UltimosCambios from '../../components/admin/UltimosCambios.astro';
 import { tablas } from '../../lib/esquema';
-import { tabla, leerFormulario, insertar, despuesDeGuardar, codificarClave, type Valores } from '../../lib/registros';
+import { tabla, leerFormulario, insertar, despuesDeGuardar, codificarClave, decodificarClave, type Valores } from '../../lib/registros';
 
 const todas = [...(await tablas()).values()];
 const t = await tabla(Astro.url.searchParams.get('tabla'));
+const anadido = decodificarClave(Astro.url.searchParams.get('anadido'));   // clave del registro recién añadido
+const aviso = Astro.url.searchParams.get('aviso');
 let errores: string[] = [];
 let valores: Valores = {};
 
@@ -20,10 +22,11 @@ if (t && Astro.request.method === 'POST') {
     const r = await insertar(t, valores, Astro.locals.usuario!);
     if (r.error) errores = [r.error];
     else {
+      // se vuelve a este mismo formulario, vacío, para poder añadir el siguiente (con un aviso de lo añadido)
       const aviso = await despuesDeGuardar(t, true);
-      const params = new URLSearchParams({ tabla: t.nombre, clave: codificarClave(r.clave!), nuevo: '1' });
+      const params = new URLSearchParams({ tabla: t.nombre, anadido: codificarClave(r.clave!) });
       if (aviso) params.set('aviso', aviso);
-      return Astro.redirect(`/admin/modificar?${params}`, 303);
+      return Astro.redirect(`/admin/anadir?${params}`, 303);
     }
   }
 }
@@ -39,6 +42,12 @@ if (t && Astro.request.method === 'POST') {
   {t && (
     <>
       <p><a href="/admin/anadir">Todas las tablas</a> · <b>{t.titulo}</b>{t.descripcion && <span class="nota"> — {t.descripcion}</span>}</p>
+      {anadido && !errores.length && (
+        <div class="ambox ok">
+          <b>Registro añadido: {anadido.join(' · ')}.</b>{aviso && ` ${aviso}`} Puedes añadir el siguiente abajo, o
+          {' '}<a href={`/admin/modificar?${new URLSearchParams({ tabla: t.nombre, clave: codificarClave(anadido) })}`}>editar el que acabas de añadir</a>.
+        </div>
+      )}
       {errores.length > 0 && <div class="ambox error"><b>No se ha guardado:</b><ul>{errores.map(e => <li>{e}</li>)}</ul></div>}
       <FormularioRegistro tabla={t} valores={valores} boton="Añadir registro" />
     </>

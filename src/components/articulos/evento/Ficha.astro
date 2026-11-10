@@ -20,5 +20,4 @@ const tieneCronica = !!ev.info || /^##\s*cr[oó]nica/im.test(articulo.contenido 
   <Fila e="Inicio" v={fecha(ev.inicio)} />
   <Fila e="Fin" v={fecha(ev.fin)} />
   <Fila e="Director" si={!!dir}><Enlace tipo="director" clave={dir?.id}>{dir?.nombre}</Enlace></Fila>
-  <Fila e="Fotos" si={!!ev.fotosurl}><a href={ev.fotosurl!} target="_blank" rel="noopener">Ver álbum</a></Fila>
 </Infobox>

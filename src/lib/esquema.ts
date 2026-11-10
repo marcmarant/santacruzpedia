@@ -49,9 +49,8 @@ const TABLAS: Record<string, [string, string]> = {
   genero: ['Géneros literarios', 'Géneros de los libros'],
 };
 const ETIQUETAS: Record<string, string> = {
-  'colegial.pid': 'Padrino', 'colegial.promocion': 'Promoción', 'colegial.foto_perfil': 'Foto de perfil',
-  'colegial.foto_insignia': 'Foto de la insignia', 'colegial.id': 'Id', 'colegialid': 'Colegial', 'cursoid': 'Curso',
-  'curso.directorid': 'Director', 'director.catedra': 'Cátedra', 'evento.fotosurl': 'Álbum de fotos (URL)',
+  'colegial.pid': 'Padrino', 'colegial.promocion': 'Promoción', 'colegial.id': 'Id', 'colegialid': 'Colegial', 'cursoid': 'Curso',
+  'curso.directorid': 'Director', 'director.catedra': 'Cátedra',
   'evento.info': 'Crónica', 'evento.tipo_id': 'Tipo de evento', 'libro.genero_id': 'Género', 'libro.fecha': 'Año',
   'libro.localizacion': 'Estantería', 'libro.isbn': 'ISBN', 'libro_autor.libro_id': 'Libro', 'libro_autor.autor_id': 'Autor',
   'habitacion.piso': 'Planta', 'habitacion.superficie': 'Superficie (m²)', 'ubicacion.pais': 'País (código ISO)',
@@ -63,6 +62,9 @@ const AYUDAS: Record<string, string> = {
   'ubicacion.pais': 'Dos letras: ES, GB, VE…',
   'premio.cursoid': 'Obligatorio salvo para «colegial de honor».',
 };
+/** columnas antiguas de fotos que ya no se usan: las fotos van ahora en la wiki (wiki.archivo, src/lib/archivos.ts).
+ *  No salen en los formularios; al añadir quedan vacías y al modificar se conservan como estén. */
+const OCULTAS = new Set(['colegial.foto_perfil', 'colegial.foto_insignia', 'evento.fotosurl']);
 /** columnas de tipo text que se editan en una caja grande (el resto, como las URLs de fotos, en una línea) */
 const TEXTOS_LARGOS = new Set(['info', 'descripcion', 'observaciones']);
 const humanizar = (s: string) => s.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
@@ -120,6 +122,7 @@ export async function tablas(): Promise<Map<string, Tabla>> {
       return nueva;
     })();
     const clave = `${c.tabla}.${c.col}`;
+    if (OCULTAS.has(clave)) continue;
     let tipo: TipoCampo =
       /^(integer|smallint|bigint)/.test(c.tipo) ? 'entero' :
       /^(double|real|numeric)/.test(c.tipo) ? 'decimal' :

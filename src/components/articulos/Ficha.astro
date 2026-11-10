@@ -1,0 +1,29 @@
+---
+// Elige la ficha lateral según el tipo de artículo
+import type { Datos } from '../../lib/datos';
+import type { Articulo } from '../../lib/wiki';
+import { tipoBloques } from '../../lib/bloques';
+import FichaColegial from './colegial/Ficha.astro';
+import FichaCurso from './curso/Ficha.astro';
+import FichaDirector from './director/Ficha.astro';
+import FichaEvento from './evento/Ficha.astro';
+import FichaHabitacion from './habitacion/Ficha.astro';
+import FichaLocalidad from './localidad/Ficha.astro';
+import FichaLibro from './libro/Ficha.astro';
+import FichaColegio from './colegio/Ficha.astro';
+import FichaDistincion from './distinciones/Ficha.astro';
+
+interface Props { articulo: Articulo; e: any; d: Datos }
+const { articulo, e, d } = Astro.props;
+
+// fichas de artículos vinculados a un dato (necesitan ese dato: e)
+const fichasDeDatos: Record<string, any> = {
+  colegial: FichaColegial, curso: FichaCurso, director: FichaDirector, evento: FichaEvento,
+  habitacion: FichaHabitacion, localidad: FichaLocalidad, libro: FichaLibro,
+};
+const tipo = tipoBloques(articulo);
+const ConDato = e ? fichasDeDatos[articulo.tipo] : null;
+---
+{tipo === 'colegio' && <FichaColegio d={d} />}
+{['premio', 'decano', 'consejero', 'consejo'].includes(tipo) && <FichaDistincion articulo={articulo} d={d} />}
+{ConDato && <ConDato articulo={articulo} e={e} d={d} />}

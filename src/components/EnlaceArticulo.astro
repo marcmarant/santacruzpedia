@@ -1,0 +1,9 @@
+---
+// Enlace a un artículo por su id (rojo si no existe)
+import { wiki } from '../lib/estado';
+import { urlArticulo } from '../lib/urls';
+
+interface Props { id: string }
+const a = wiki().porId.get(Astro.props.id);
+---
+{a ? <a href={urlArticulo(a.id)} title={a.titulo}><slot /></a> : <a class="new" title="La página no existe"><slot /></a>}

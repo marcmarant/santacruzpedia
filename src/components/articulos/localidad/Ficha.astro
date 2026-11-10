@@ -1,0 +1,16 @@
+---
+import type { Ubicacion, Datos } from '../../../lib/datos';
+import type { Articulo } from '../../../lib/wiki';
+import { PROVINCIAS, PAISES } from '../../../lib/formato';
+import Infobox from '../../infobox/Infobox.astro';
+import Fila from '../../infobox/Fila.astro';
+
+interface Props { articulo: Articulo; e: Ubicacion; d: Datos }
+const { articulo, e: u, d } = Astro.props;
+const n = [...d.cols.values()].filter(c => c.procedencia === u.localidad).length;
+---
+<Infobox titulo={articulo.titulo}>
+  <Fila e="Provincia" v={u.provincia ? PROVINCIAS[u.provincia] : null} />
+  <Fila e="País" v={u.pais ? PAISES[u.pais] ?? u.pais : null} />
+  <Fila e="Colegiales" v={n} />
+</Infobox>

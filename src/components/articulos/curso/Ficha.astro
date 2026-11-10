@@ -1,0 +1,33 @@
+---
+import type { Curso, Datos } from '../../../lib/datos';
+import { esNovatoEn } from '../../../lib/datos';
+import type { Articulo } from '../../../lib/wiki';
+import { PREMIOS } from '../../../lib/formato';
+import { ARTICULO_PREMIO } from '../../../lib/bloques';
+import Infobox from '../../infobox/Infobox.astro';
+import Fila from '../../infobox/Fila.astro';
+import Enlace from '../../Enlace.astro';
+
+interface Props { articulo: Articulo; e: Curso; d: Datos }
+const { articulo, e: c, d } = Astro.props;
+const ids = [...d.cursos.keys()];
+const i = ids.indexOf(c.id);
+const anterior = ids[i - 1], siguiente = ids[i + 1];
+const orden = ['diego_de_muros', 'victor_verde', 'colegial_de_honor'];
+const premiosCurso = [...c.premios].sort((a, b) => orden.indexOf(a.tipo) - orden.indexOf(b.tipo));
+---
+<Infobox titulo={articulo.titulo}>
+  <Fila e="Director" si>{c.director ? <Enlace tipo="director" clave={c.director.id}>{c.director.nombre}</Enlace> : <i>Sin datos</i>}</Fila>
+  <Fila e="Decano" articulo="decano" si={!!c.decano}><Enlace tipo="colegial" clave={c.decano?.id}>{c.decano?.mote}</Enlace></Fila>
+  <Fila e="Consejo" articulo="consejo" si={c.consejeros.length > 0}>
+    {c.consejeros.map((x, i) => <>{i > 0 && ', '}<Enlace tipo="colegial" clave={x.id}>{x.mote}</Enlace></>)}
+  </Fila>
+  {premiosCurso.map(p => (
+    <Fila e={PREMIOS[p.tipo]} articulo={ARTICULO_PREMIO[p.tipo]} si><Enlace tipo="colegial" clave={p.col.id}>{p.col.mote}</Enlace></Fila>
+  ))}
+  <Fila e="Colegiales" v={c.miembros.length} />
+  <Fila e="Novatos" v={c.miembros.filter(m => esNovatoEn(m.col, c.id)).length} />
+  <Fila e="Eventos" v={c.eventos.length} />
+  <Fila e="Anterior" si={!!anterior}><Enlace tipo="curso" clave={anterior}>{anterior}</Enlace></Fila>
+  <Fila e="Siguiente" si={!!siguiente}><Enlace tipo="curso" clave={siguiente}>{siguiente}</Enlace></Fila>
+</Infobox>

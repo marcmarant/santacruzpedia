@@ -1,0 +1,84 @@
+---
+// Portada
+import Wiki from '../layouts/Wiki.astro';
+import Enlace from '../components/Enlace.astro';
+import Foto from '../components/Foto.astro';
+import Galeria from '../components/Galeria.astro';
+import { datos } from '../lib/estado';
+import { esNovatoEn } from '../lib/datos';
+import { tieneFoto } from '../lib/fotos';
+import { plural, PROVINCIAS } from '../lib/formato';
+import { urlColegio, urlDe } from '../lib/urls';
+
+const d = datos();
+const curso = d.cursos.get(d.actual)!;
+const colegiales = [...d.cols.values()];
+const dia = Math.floor(Date.now() / 864e5);
+const conFoto = colegiales.filter(c => tieneFoto(c.id));
+const destacado = (conFoto.length ? conFoto : colegiales)[dia % (conFoto.length || colegiales.length)];
+const ultimaEstancia = destacado.estancias.at(-1);
+
+const porProvincia = new Map<string, number>();
+for (const c of colegiales) { const p = c.procedencia ? d.ubic.get(c.procedencia)?.provincia : null; if (p) porProvincia.set(p, (porProvincia.get(p) ?? 0) + 1); }
+const [provTop, provN] = [...porProvincia].sort((a, b) => b[1] - a[1])[0] ?? [];
+const padrinoTop = [...colegiales].sort((a, b) => b.ahijados.length - a.ahijados.length)[0];
+const habTop = [...d.habs.values()].sort((a, b) => b.historial.length - a.historial.length)[0];
+const libroDia = d.libros[dia % d.libros.length];
+const libroAntiguo = d.libros.filter(l => l.fecha).sort((a, b) => a.fecha! - b.fecha!)[0];
+const conApodos = colegiales.filter(c => c.apodos.length).length;
+const actuales = curso.miembros.map(m => m.col).sort((a, b) => a.mote.localeCompare(b.mote));
+---
+<Wiki titulo="Portada">
+  <div class="welcome">
+    <h2 class="nob">Bienvenidos a Santacruzpedia,</h2>
+    <p>
+      la enciclopedia libre del <a href={urlColegio()}>Colegio Mayor Santa Cruz</a> de Valladolid, sede Cardenal Mendoza <i>(la buena)</i>.<br />
+      <b>{d.cols.size}</b> colegiales · <b>{d.cursos.size}</b> cursos · <b>{d.habs.size}</b> habitaciones · <b>{d.libros.length}</b> libros
+    </p>
+  </div>
+
+  <div class="mp">
+    <div class="box">
+      <h3>Colegial destacado</h3>
+      <a href={urlDe('colegial', destacado.id) ?? undefined} class="fr"><Foto c={destacado} clase="feat" perezosa={false} /></a>
+      <p>
+        <b><Enlace tipo="colegial" clave={destacado.id}>{destacado.mote}</Enlace></b>{destacado.nombre && ` (${destacado.nombre})`}
+        {' '}es colegial{destacado.promo && ` de la promoción de ${destacado.promo}`}{destacado.procedencia && <>, natural de <Enlace tipo="localidad" clave={destacado.procedencia}>{destacado.procedencia}</Enlace></>}.
+        {destacado.estancias.length > 0 && <> Ha vivido {plural(destacado.estancias.length, 'curso')} en el colegio{ultimaEstancia?.hab != null && <>, el último en la <Enlace tipo="habitacion" clave={ultimaEstancia.hab}>Habitación {ultimaEstancia.hab}</Enlace></>}.</>}
+        {destacado.pid && d.cols.has(destacado.pid) && <> Su padrino es <Enlace tipo="colegial" clave={destacado.pid}>{d.cols.get(destacado.pid)!.mote}</Enlace>.</>}
+        {destacado.ahijados.length > 0 && ` Tiene ${plural(destacado.ahijados.length, 'ahijado')}.`}
+      </p>
+      <p><a href={urlDe('colegial', destacado.id) ?? undefined}>Leer más…</a></p>
+    </div>
+    <div class="box">
+      <h3>¿Sabías que…?</h3>
+      <ul>
+        {provTop && <li>…que la provincia de <b>{PROVINCIAS[provTop]}</b> es la que más colegiales ha aportado ({provN})?</li>}
+        <li>…que <Enlace tipo="colegial" clave={padrinoTop.id}>{padrinoTop.mote}</Enlace> es el padrino más prolífico, con {plural(padrinoTop.ahijados.length, 'ahijado')}?</li>
+        <li>…que por la <Enlace tipo="habitacion" clave={habTop.id}>Habitación {habTop.id}</Enlace> han pasado {habTop.historial.length} residentes?</li>
+        {libroAntiguo && <li>…que el libro más antiguo de la <a href="/biblioteca">biblioteca</a> es <Enlace tipo="libro" clave={libroAntiguo.id}><i>{libroAntiguo.titulo}</i></Enlace>, de {libroAntiguo.fecha}?</li>}
+        <li>…que hay {conApodos} colegiales con más de un apodo?</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>Actualidad: curso <Enlace tipo="curso" clave={d.actual}>{d.actual}</Enlace></h3>
+    <p>
+      Director: {curso.director ? <Enlace tipo="director" clave={curso.director.id}>{curso.director.nombre}</Enlace> : <i>Sin datos</i>}
+      · {plural(curso.miembros.length, 'colegial', 'colegiales')} · Novatos: {curso.miembros.filter(m => esNovatoEn(m.col, d.actual)).length}
+    </p>
+    <Galeria colegiales={actuales} />
+  </div>
+
+  <div class="mp">
+    <div class="box">
+      <h3>Libro del día</h3>
+      <p><Enlace tipo="libro" clave={libroDia.id}><i>{libroDia.titulo}</i></Enlace>{libroDia.autor && `, de ${libroDia.autor}`}{libroDia.fecha && ` (${libroDia.fecha})`}.</p>
+    </div>
+    <div class="box">
+      <h3>Cursos</h3>
+      <p>{[...d.cursos.keys()].map((id, i) => <>{i > 0 && ' · '}<Enlace tipo="curso" clave={id}>{id}</Enlace></>)}</p>
+    </div>
+  </div>
+</Wiki>

@@ -1,0 +1,31 @@
+---
+import Acceso from '../layouts/Acceso.astro';
+import { iniciarSesion, destinoSeguro } from '../lib/auth';
+
+const volver = destinoSeguro(Astro.url.searchParams.get('volver'));
+if (Astro.locals.usuario) return Astro.redirect(volver);
+
+let usuario = '';
+let error: string | null = null;
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  usuario = String(f.get('usuario') ?? '');
+  error = await iniciarSesion(usuario, String(f.get('contrasena') ?? ''), {
+    cookies: Astro.cookies, https: Astro.url.protocol === 'https:',
+    ip: Astro.clientAddress ?? null, navegador: Astro.request.headers.get('user-agent'),
+  });
+  if (!error) return Astro.redirect(volver, 303);
+}
+---
+<Acceso titulo="Iniciar sesión">
+  <p class="nota">Santacruzpedia es solo para colegiales y excolegiales del Colegio Mayor Santa Cruz.</p>
+  {error && <div class="ambox error">{error}</div>}
+  <form method="post" class="formulario">
+    <label>Usuario <input name="usuario" value={usuario} autocomplete="username" autocapitalize="none" required autofocus /></label>
+    <label>Contraseña <input name="contrasena" type="password" autocomplete="current-password" required /></label>
+    <button class="primario">Entrar</button>
+  </form>
+  <p class="nota">Tu usuario es tu identificador de colegial (por ejemplo, <code>2021plato</code>).</p>
+  <hr />
+  <p>¿No tienes cuenta? Pide a un moderador un enlace de invitación o <a href="/solicitar-acceso">solicita acceso</a>.</p>
+</Acceso>

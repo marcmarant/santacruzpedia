@@ -1,0 +1,18 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+import RamaArbol from '../components/RamaArbol.astro';
+import Enlace from '../components/Enlace.astro';
+import { datos } from '../lib/estado';
+
+const d = datos();
+const cols = [...d.cols.values()];
+const sinPadrino = (c: typeof cols[number]) => !c.pid || !d.cols.has(c.pid);
+const raices = cols.filter(c => c.ahijados.length && sinPadrino(c)).sort((a, b) => b.ahijados.length - a.ahijados.length);
+const sueltos = cols.filter(c => !c.ahijados.length && sinPadrino(c));
+---
+<Wiki titulo="Árbol de padrinos">
+  <p>Cada colegial nuevo es apadrinado por un veterano. Estos son los {raices.length} grandes linajes del colegio, empezando por el fundador de cada uno.</p>
+  {raices.map(r => <><h2>Linaje de {r.mote}</h2><ul class="tree"><RamaArbol c={r} /></ul></>)}
+  <h2>Colegiales sin linaje registrado</h2>
+  <p>{sueltos.map((c, i) => <>{i > 0 && ' · '}<Enlace tipo="colegial" clave={c.id}>{c.mote}</Enlace></>)}</p>
+</Wiki>

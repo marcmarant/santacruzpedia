@@ -1,0 +1,16 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+import Enlace from '../components/Enlace.astro';
+import { datos } from '../lib/estado';
+
+const d = datos();
+const filas = [...d.estudios.values()]
+  .map(e => ({ e, n: [...d.cols.values()].filter(c => c.estancias.some(x => x.estudio === e.id)).length }))
+  .sort((a, b) => b.n - a.n);
+---
+<Wiki titulo="Estudios">
+  <table class="wikitable sortable">
+    <thead><tr><th>Estudio</th><th>Tipo</th><th>Colegiales</th></tr></thead>
+    <tbody>{filas.map(({ e, n }) => <tr><td><Enlace tipo="estudio" clave={e.id}>{e.nombre}</Enlace></td><td>{e.tipo}</td><td>{n}</td></tr>)}</tbody>
+  </table>
+</Wiki>

@@ -1,0 +1,34 @@
+---
+// Página de un artículo: ficha (datos) + texto guardado en la base de datos + bloques automáticos
+import Wiki from '../../../layouts/Wiki.astro';
+import CuerpoArticulo from '../../../components/articulos/CuerpoArticulo.astro';
+import { datos, wiki } from '../../../lib/estado';
+import { entidadDe, categoriasAutomaticas } from '../../../lib/articulos';
+import { renderizarWikitexto } from '../../../lib/wikitexto';
+import { urlArticulo } from '../../../lib/urls';
+
+const id = Astro.params.id!;
+const w = wiki(), d = datos();
+const articulo = w.porId.get(id);
+
+if (!articulo) {
+  const nuevoId = w.idsAntiguos.get(id);
+  if (nuevoId) return Astro.redirect(urlArticulo(nuevoId), 301);
+  return Astro.rewrite('/404');
+}
+
+const e = entidadDe(articulo, d);
+const { categorias } = renderizarWikitexto(articulo.contenido ?? '', w);
+const subtitulo = articulo.tipo === 'colegial' && e?.nombre ? e.nombre : null;
+const redirigidoDesde = Astro.url.searchParams.get('redirigido');
+---
+<Wiki
+  titulo={articulo.titulo}
+  cursiva={articulo.tipo === 'libro'}
+  subtitulo={subtitulo}
+  categorias={[...categoriasAutomaticas(articulo, e, d), ...categorias]}
+  articuloId={articulo.id}
+  redirigidoDesde={redirigidoDesde}
+>
+  <CuerpoArticulo articulo={articulo} />
+</Wiki>

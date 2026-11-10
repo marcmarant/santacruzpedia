@@ -1,0 +1,27 @@
+{
+  "name": "santacruzpedia",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "start": "node --env-file=.env dist/server/entry.mjs",
+    "check": "astro check",
+    "importar-articulos": "node --env-file=.env scripts/importar-articulos.mjs",
+    "crear-moderador": "node --env-file=.env scripts/crear-moderador.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.11",
+    "@lucide/astro": "^1.70.0",
+    "astro": "^7.4.7",
+    "diff": "^8.0.4",
+    "marked": "^15.0.12",
+    "pg": "^8.16.0",
+    "sanitize-html": "^2.18.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "@types/sanitize-html": "^2.16.2",
+    "typescript": "^7.0.2"
+  }
+}

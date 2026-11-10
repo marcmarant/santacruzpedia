@@ -1,0 +1,35 @@
+---
+// Pestaña «Ver código»: el texto tal y como está guardado en wiki.revision.contenido
+import Wiki from '../../../layouts/Wiki.astro';
+import { wiki } from '../../../lib/estado';
+import { BLOQUES, tipoBloques } from '../../../lib/bloques';
+import { urlArticulo } from '../../../lib/urls';
+import SquarePen from '@lucide/astro/icons/square-pen';
+
+const articulo = wiki().porId.get(Astro.params.id!);
+if (!articulo) return Astro.rewrite('/404');
+const bloques = BLOQUES[tipoBloques(articulo)] ?? [];
+---
+<Wiki titulo={`Código de «${articulo.titulo}»`} articuloId={articulo.id} pestana="codigo">
+  <p>
+    Este es el texto del artículo <a href={urlArticulo(articulo.id)}>{articulo.titulo}</a> tal y como está guardado en la base
+    de datos (versión {articulo.revision_actual ?? '—'}{articulo.rev_autor && <>, de {articulo.rev_autor}</>}).
+  </p>
+  <div class="botones">
+    <a class="boton primario" href={`${urlArticulo(articulo.id)}/editar`}><SquarePen class="icono" size={16} />Editar</a>
+    <span class="nota">Los cambios se envían a revisión y se publican cuando un moderador los aprueba.</span>
+  </div>
+  <pre class="codigo">{articulo.contenido ?? '(sin texto)'}</pre>
+  <h2>Cómo se escribe</h2>
+  <table class="wikitable">
+    <thead><tr><th>Escribes</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td><code>**negrita**</code>, <code>*cursiva*</code></td><td><b>negrita</b>, <i>cursiva</i></td></tr>
+      <tr><td><code>## Sección</code></td><td>Un título de sección</td></tr>
+      <tr><td><code>[[Plato]]</code></td><td>Enlace al artículo «Plato» (rojo si no existe)</td></tr>
+      <tr><td><code>[[Habitación 21|su habitación]]</code></td><td>Enlace a «Habitación 21» con el texto «su habitación»</td></tr>
+      <tr><td><code>[[Categoría:Guías de rutas]]</code></td><td>Añade el artículo a esa categoría</td></tr>
+      <tr><td><code>{'{{bloque}}'}</code></td><td>Tabla o galería automática. En este artículo: {bloques.length ? bloques.map((b, i) => <>{i > 0 && ', '}<code>{`{{${b}}}`}</code></>) : 'ninguno'}</td></tr>
+    </tbody>
+  </table>
+</Wiki>

@@ -1,0 +1,45 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+import Galeria from '../components/Galeria.astro';
+import Enlace from '../components/Enlace.astro';
+import { datos } from '../lib/estado';
+import type { Colegial } from '../lib/datos';
+
+const d = datos();
+const porPromo = new Map<string, Colegial[]>();
+for (const c of d.cols.values()) {
+  const k = c.promo != null ? String(c.promo) : 'desconocida';
+  porPromo.set(k, [...(porPromo.get(k) ?? []), c]);
+}
+const promos = [...porPromo.keys()].filter(k => k !== 'desconocida').sort().reverse();
+if (porPromo.has('desconocida')) promos.push('desconocida');
+---
+<Wiki titulo="Anexo:Colegiales del Colegio Mayor Santa Cruz">
+  <p>Lista de los {d.cols.size} colegiales registrados, ordenados por promoción (año de ingreso).</p>
+  <input class="filtro" data-filtro=".gal, #tcol tbody tr" placeholder="Filtrar por mote, nombre, procedencia…" />
+
+  {promos.map(k => (
+    <>
+      <h2>{k === 'desconocida' ? 'Promoción desconocida' : `Promoción de ${k}`}</h2>
+      <Galeria colegiales={porPromo.get(k)!.sort((a, b) => a.mote.localeCompare(b.mote))} pie={c => c.nombre} />
+    </>
+  ))}
+
+  <h2>Tabla completa</h2>
+  <table id="tcol" class="wikitable sortable">
+    <thead><tr><th>Mote</th><th>Nombre</th><th>Promoción</th><th>Procedencia</th><th>Padrino</th><th>Cursos</th><th>Ahijados</th></tr></thead>
+    <tbody>
+      {[...d.cols.values()].map(c => (
+        <tr>
+          <td><Enlace tipo="colegial" clave={c.id}>{c.mote}</Enlace></td>
+          <td>{c.nombre}</td>
+          <td>{c.promo}</td>
+          <td>{c.procedencia && <Enlace tipo="localidad" clave={c.procedencia}>{c.procedencia}</Enlace>}</td>
+          <td>{c.pid && <Enlace tipo="colegial" clave={c.pid}>{d.cols.get(c.pid)?.mote ?? c.pid}</Enlace>}</td>
+          <td>{c.estancias.length}</td>
+          <td>{c.ahijados.length}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</Wiki>

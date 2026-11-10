@@ -1,0 +1,17 @@
+---
+// Rama del árbol de padrinos (se llama a sí misma para pintar los ahijados)
+import type { Colegial } from '../lib/datos';
+import Enlace from './Enlace.astro';
+import Foto from './Foto.astro';
+
+interface Props { c: Colegial; vistos?: Set<string> }
+const { c, vistos = new Set<string>() } = Astro.props;
+const repetido = vistos.has(c.id);
+vistos.add(c.id);
+---
+{!repetido && (
+  <li>
+    <span class="tn"><Foto c={c} /><Enlace tipo="colegial" clave={c.id}>{c.mote}</Enlace> <small>{c.promo ?? ''}</small></span>
+    {c.ahijados.length > 0 && <ul>{c.ahijados.map(x => <Astro.self c={x} vistos={vistos} />)}</ul>}
+  </li>
+)}

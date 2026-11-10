@@ -1,0 +1,25 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+import Enlace from '../components/Enlace.astro';
+import { datos } from '../lib/estado';
+
+const d = datos();
+const generos = new Map<string, number>();
+for (const l of d.libros) generos.set(l.genero ?? 'Sin género', (generos.get(l.genero ?? 'Sin género') ?? 0) + 1);
+const años = d.libros.map(l => l.fecha).filter((x): x is number => x != null);
+---
+<Wiki titulo="Biblioteca del Colegio">
+  <p>La biblioteca del colegio reúne <b>{d.libros.length}</b> volúmenes, desde {Math.min(...años)} hasta {Math.max(...años)}.</p>
+  <h2>Géneros</h2>
+  <p>{[...generos].sort((a, b) => b[1] - a[1]).map(([g, n]) => `${g} (${n})`).join(' · ')}</p>
+  <h2>Catálogo</h2>
+  <input class="filtro" data-filtro="#tlib tbody tr" placeholder="Filtrar por título, autor, editorial…" />
+  <table id="tlib" class="wikitable sortable">
+    <thead><tr><th>Nº</th><th>Título</th><th>Autor</th><th>Género</th><th>Editorial</th><th>Año</th><th>Ubicación</th></tr></thead>
+    <tbody>
+      {d.libros.map(l => (
+        <tr><td>{l.id}</td><td><Enlace tipo="libro" clave={l.id}>{l.titulo}</Enlace></td><td>{l.autor}</td><td>{l.genero}</td><td>{l.editorial}</td><td>{l.fecha}</td><td>{l.localizacion}</td></tr>
+      ))}
+    </tbody>
+  </table>
+</Wiki>

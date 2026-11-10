@@ -1,0 +1,125 @@
+---
+// Plantilla de todas las páginas: cabecera, menú lateral, pestañas, categorías y pie.
+// Con `admin` (panel de administración) no hay menú lateral y las pestañas son las del panel.
+import { datos } from '../lib/estado';
+import { urlArticulo, urlColegio, urlDe } from '../lib/urls';
+import Moon from '@lucide/astro/icons/moon';
+import Sun from '@lucide/astro/icons/sun';
+import UserRound from '@lucide/astro/icons/user-round';
+import ShieldCheck from '@lucide/astro/icons/shield-check';
+import LogOut from '@lucide/astro/icons/log-out';
+import FilePen from '@lucide/astro/icons/file-pen';
+
+interface Props {
+  titulo: string;
+  cursiva?: boolean;                        // títulos de libros
+  subtitulo?: string | null;
+  categorias?: string[];
+  articuloId?: string;                      // si es un artículo, muestra sus pestañas
+  pestana?: 'leer' | 'codigo' | 'historial';
+  redirigidoDesde?: string | null;
+  admin?: 'propuestas' | 'usuarios' | 'anadir' | 'modificar';        // página del panel de administración
+}
+const { titulo, cursiva = false, subtitulo, categorias = [], articuloId, pestana = 'leer', redirigidoDesde, admin } = Astro.props;
+const cargado = datos().cargado.toLocaleString('es-ES');
+const base = articuloId ? urlArticulo(articuloId) : '';
+const usuario = Astro.locals.usuario;
+const urlPropia = usuario?.colegial_id ? urlDe('colegial', usuario.colegial_id) : null;
+---
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{titulo} - Santacruzpedia</title>
+  <link rel="icon" href="/logo.png" />
+  <link rel="stylesheet" href="/wiki.css?v=12" />
+  <script is:inline>if (localStorage.dark) document.documentElement.classList.add('dark');</script>
+</head>
+<body class:list={[{ 'modo-admin': admin }]}>
+  <header class="top">
+    <a class="brand" href="/"><img src="/logo.png" alt="" /><span><b>Santacruzpedia</b><small>La enciclopedia del Mayor</small></span></a>
+    <form class="search" action="/buscar"><input name="q" placeholder="Buscar en Santacruzpedia" autocomplete="off" /><button>Buscar</button></form>
+    <nav class="cuenta">
+      {usuario && (
+        <>
+          {urlPropia
+            ? <a href={urlPropia} title="Tu artículo"><UserRound class="icono" size={16} /><span>{usuario.nombre}</span></a>
+            : <span title="Tu cuenta"><UserRound class="icono" size={16} /><span>{usuario.nombre}</span></span>}
+          <a href="/mis-propuestas" class:list={[{ activo: Astro.url.pathname === '/mis-propuestas' }]}><FilePen class="icono" size={16} /><span>Mis propuestas</span></a>
+          {usuario.rol === 'moderador' && (
+            <a href="/admin" class:list={[{ activo: admin }]}><ShieldCheck class="icono" size={16} /><span>Administrar</span></a>
+          )}
+          <form method="post" action="/logout"><button class="enlace" title="Cerrar sesión"><LogOut class="icono" size={16} /><span>Cerrar sesión</span></button></form>
+        </>
+      )}
+      <button class="tema" id="tema" title="Cambiar entre tema claro y oscuro" aria-label="Cambiar tema">
+        <Moon class="icono si-claro" size={18} /><Sun class="icono si-oscuro" size={18} />
+      </button>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    {!admin && (
+      <nav class="side">
+        <h4>Navegación</h4>
+        <a href="/">Portada</a>
+        <a href={urlColegio()}>El Colegio Mayor</a>
+        <a href="/aleatorio">Página aleatoria</a>
+        <h4>Explorar</h4>
+        <a href="/colegiales">Colegiales</a>
+        <a href="/cursos">Cursos</a>
+        <a href="/eventos">Eventos</a>
+        <a href="/habitaciones">Habitaciones</a>
+        <a href="/arbol">Árbol de padrinos</a>
+        <a href={urlDe('libre', 'consejo') ?? undefined}>Consejo</a>
+        <a href="/estudios">Estudios</a>
+        <a href="/procedencias">Procedencias</a>
+        <a href="/biblioteca">Biblioteca</a>
+        <div id="toc"></div>
+      </nav>
+    )}
+
+    <main id="top">
+      {admin ? (
+        <div class="tabs">
+          <a class:list={[{ sel: admin === 'propuestas' }]} href="/admin">Propuestas de cambio</a>
+          <a class:list={[{ sel: admin === 'usuarios' }]} href="/admin/usuarios">Usuarios y accesos</a>
+          <a class:list={[{ sel: admin === 'anadir' }]} href="/admin/anadir">Añadir registros</a>
+          <a class:list={[{ sel: admin === 'modificar' }]} href="/admin/modificar">Modificar registros</a>
+        </div>
+      ) : (
+        <div class="tabs">
+          <span class="sel">{articuloId ? 'Artículo' : 'Página especial'}</span>
+          {articuloId && (
+            <span class="r">
+              <a class:list={[{ sel: pestana === 'leer' }]} href={base}>Leer</a>
+              <a class:list={[{ sel: pestana === 'codigo' }]} href={`${base}/codigo`}>Ver código</a>
+              <a class:list={[{ sel: pestana === 'historial' }]} href={`${base}/historial`}>Ver historial</a>
+            </span>
+          )}
+        </div>
+      )}
+      <h1>{cursiva ? <i>{titulo}</i> : titulo}</h1>
+      {!admin && (
+        <div class="sitesub">
+          De Santacruzpedia, la enciclopedia libre del Colegio Mayor Santa Cruz{subtitulo && <> · {subtitulo}</>}
+        </div>
+      )}
+      {redirigidoDesde && <div class="redir">(Redirigido desde «{redirigidoDesde}»)</div>}
+
+      <div class="content"><slot /></div>
+
+      {categorias.length > 0 && (
+        <div class="catlinks"><b>Categorías:</b> {categorias.map((c, i) => <>{i > 0 && ' | '}<span>{c}</span></>)}</div>
+      )}
+      <footer>
+        Datos obtenidos de la base de datos <code>scdb</code> el {cargado}.
+        Contenido de uso interno del Colegio Mayor Santa Cruz sede Cardenal Mendoza. No difundir sin autorización.
+      </footer>
+    </main>
+  </div>
+
+  <script is:inline src="/wiki.js?v=2"></script>
+</body>
+</html>

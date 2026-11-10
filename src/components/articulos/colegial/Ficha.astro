@@ -1,0 +1,73 @@
+---
+import type { Colegial, Datos } from '../../../lib/datos';
+import type { Articulo } from '../../../lib/wiki';
+import { fecha, edad, norm, PROVINCIAS, PAISES, PREMIOS, CARGOS } from '../../../lib/formato';
+import { urlFoto } from '../../../lib/urls';
+import { creditoFoto } from '../../../lib/fotos';
+import Infobox from '../../infobox/Infobox.astro';
+import Fila from '../../infobox/Fila.astro';
+import Seccion from '../../infobox/Seccion.astro';
+import Enlace from '../../Enlace.astro';
+import Foto from '../../Foto.astro';
+import EnlaceArticulo from '../../EnlaceArticulo.astro';
+import { ARTICULO_PREMIO, ARTICULO_CARGO } from '../../../lib/bloques';
+
+interface Props { articulo: Articulo; e: Colegial; d: Datos }
+const { articulo, e: c, d } = Astro.props;
+
+const u = c.procedencia ? d.ubic.get(c.procedencia) : undefined;
+const padrino = c.pid ? d.cols.get(c.pid) : undefined;
+const ultima = c.estancias.at(-1);
+const esActual = ultima?.curso === d.actual;
+const estudios = [...new Set(c.estancias.map(x => x.estudio).filter(Boolean))] as string[];
+const homonimos = [...d.cols.values()].filter(x => x.id !== c.id && norm(x.mote) === norm(c.mote));
+// esbozo: faltan datos y nadie ha escrito todavía un texto largo
+const textoLargo = (articulo.contenido?.length ?? 0) > 800;
+const esEsbozo = (!c.nombre || !c.procedencia || !c.estancias.length) && !textoLargo;
+const credito = creditoFoto(c.id);
+const promo = (x: Colegial) => x.promo ? String(x.promo) : 'promoción desconocida';
+---
+{homonimos.length > 0 && (
+  <div class="hatnote">
+    Este artículo trata sobre el colegial {c.promo ? `de ${c.promo}` : 'de promoción desconocida'}.
+    Para otros colegiales con el mismo mote, véase {homonimos.map((h, i) => <>{i > 0 && ', '}<Enlace tipo="colegial" clave={h.id}>{h.mote}</Enlace> ({promo(h)})</>)}.
+  </div>
+)}
+{esEsbozo && (
+  <div class="ambox">Este artículo sobre un colegial es un <b>esbozo</b>. Puedes ayudar a Santacruzpedia completando sus datos en la base de datos.</div>
+)}
+
+<Infobox titulo={articulo.titulo} pie={credito ?? c.nombre ?? c.mote}>
+  <a slot="imagen" href={urlFoto(c.id)} target="_blank"><Foto c={c} perezosa={false} /></a>
+  <Fila e="Nombre" v={c.nombre} />
+  <Fila e="Mote" si><b>{c.mote}</b></Fila>
+  <Fila e="Otros apodos" v={c.apodos.join(', ')} />
+  <Fila e="Nacimiento" v={c.nacimiento ? `${fecha(c.nacimiento)} (${edad(c.nacimiento)} años)` : null} />
+  <Fila e="Procedencia" si={!!c.procedencia}>
+    <Enlace tipo="localidad" clave={c.procedencia}>{c.procedencia}</Enlace>{u?.provincia && `, ${PROVINCIAS[u.provincia]}`}{u?.pais && u.pais !== 'ES' && `, ${PAISES[u.pais] ?? u.pais}`}
+  </Fila>
+  <Seccion titulo="Vida colegial" />
+  <Fila e="Promoción" v={c.promo} />
+  <Fila e="Estado" v={esActual ? 'Colegial actual' : c.estancias.length ? 'Antiguo colegial' : null} />
+  <Fila e="Cursos" v={ultima ? `${c.estancias[0].curso} – ${ultima.curso} (${c.estancias.length})` : null} />
+  <Fila e="Habitación" si={ultima?.hab != null}><Enlace tipo="habitacion" clave={ultima?.hab}>Habitación {ultima?.hab}</Enlace></Fila>
+  <Fila e="Estudios" si={estudios.length > 0}>
+    {estudios.map((x, i) => <>{i > 0 && <br />}<Enlace tipo="estudio" clave={x}>{d.estudios.get(x)?.nombre}</Enlace></>)}
+  </Fila>
+  <Fila e="Padrino" si={!!c.pid}>
+    {padrino ? <Enlace tipo="colegial" clave={padrino.id}>{padrino.mote}</Enlace> : c.pid}
+  </Fila>
+  <Fila e="Ahijados" si={c.ahijados.length > 0}>
+    {c.ahijados.map((x, i) => <>{i > 0 && ', '}<Enlace tipo="colegial" clave={x.id}>{x.mote}</Enlace></>)}
+  </Fila>
+  {(c.cargos.length > 0 || c.premios.length > 0) && <Seccion titulo="Cargos y distinciones" />}
+  <Fila e="Cargos" si={c.cargos.length > 0}>
+    {c.cargos.map((x, i) => <>{i > 0 && <br />}<EnlaceArticulo id={ARTICULO_CARGO[x.cargo]}>{CARGOS[x.cargo]}</EnlaceArticulo> (<Enlace tipo="curso" clave={x.curso}>{x.curso}</Enlace>)</>)}
+  </Fila>
+  <Fila e="Premios" si={c.premios.length > 0}>
+    {c.premios.map((p, i) => <>{i > 0 && <br />}<EnlaceArticulo id={ARTICULO_PREMIO[p.tipo]}>{PREMIOS[p.tipo]}</EnlaceArticulo>{p.curso && <> (<Enlace tipo="curso" clave={p.curso}>{p.curso}</Enlace>)</>}</>)}
+  </Fila>
+  <Fila e="Insignia" si={!!c.fotoInsignia?.startsWith('http')}>
+    <a href={c.fotoInsignia!} target="_blank" rel="noopener">Foto en Flickr</a>
+  </Fila>
+</Infobox>

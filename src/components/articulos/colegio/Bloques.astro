@@ -1,0 +1,37 @@
+---
+// Bloques del artículo principal: {{directores}} {{cifras}}
+import type { Datos } from '../../../lib/datos';
+import Enlace from '../../Enlace.astro';
+
+interface Props { nombre: string; d: Datos }
+const { nombre, d } = Astro.props;
+const directores = [...d.directores.values()]
+  .map(dir => ({ dir, cursos: [...d.cursos.values()].filter(c => c.directorid === dir.id).map(c => c.id) }))
+  .sort((a, b) => (a.cursos[0] ?? '').localeCompare(b.cursos[0] ?? ''));
+const primero = [...d.cursos.keys()][0];
+---
+{nombre === 'directores' && (
+  <>
+    <h2>Directores</h2>
+    <table class="wikitable">
+      <thead><tr><th>Director</th><th>Cursos</th></tr></thead>
+      <tbody>
+        {directores.map(({ dir, cursos }) => (
+          <tr><td><Enlace tipo="director" clave={dir.id}>{dir.nombre}</Enlace></td><td>{cursos.length ? `${cursos[0]} – ${cursos.at(-1)}` : ''}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+)}
+
+{nombre === 'cifras' && (
+  <>
+    <h2>Cifras</h2>
+    <ul>
+      <li>{d.cols.size} colegiales registrados.</li>
+      <li>{d.cursos.size} cursos documentados ({primero} – {d.actual}).</li>
+      <li>{d.eventos.length} eventos registrados.</li>
+      <li>Una biblioteca de {d.libros.length} volúmenes.</li>
+    </ul>
+  </>
+)}

@@ -1,0 +1,24 @@
+---
+// Bloques de una habitación: {{historial_residentes}} {{plano}}
+import type { Habitacion, Datos } from '../../../lib/datos';
+import { PISOS } from '../../../lib/formato';
+import Galeria from '../../Galeria.astro';
+
+interface Props { nombre: string; e: Habitacion; d: Datos }
+const { nombre, e: h } = Astro.props;
+const residentes = [...new Map(h.historial.map(x => [x.col.id, x.col])).values()];
+const cursosDe = (id: string) => h.historial.filter(x => x.col.id === id).map(x => x.curso).join(', ');
+---
+{nombre === 'historial_residentes' && (
+  <>
+    <h2>Historial de residentes</h2>
+    {residentes.length ? <Galeria colegiales={residentes} pie={c => cursosDe(c.id)} /> : <p>Sin residentes registrados.</p>}
+  </>
+)}
+
+{nombre === 'plano' && h.piso != null && (
+  <>
+    <h2>Plano</h2>
+    <figure class="thumb"><img src={`/plano/${h.piso}`} alt={`Plano de ${PISOS[h.piso]}`} /><figcaption>{PISOS[h.piso]}</figcaption></figure>
+  </>
+)}

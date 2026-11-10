@@ -1,0 +1,20 @@
+---
+import type { Libro, Datos } from '../../../lib/datos';
+import type { Articulo } from '../../../lib/wiki';
+import Infobox from '../../infobox/Infobox.astro';
+import Fila from '../../infobox/Fila.astro';
+
+interface Props { articulo: Articulo; e: Libro; d: Datos }
+const { e: l } = Astro.props;
+---
+<Infobox titulo={l.titulo} cursiva>
+  {l.isbn && <img slot="imagen" src={`https://covers.openlibrary.org/b/isbn/${encodeURIComponent(l.isbn)}-M.jpg?default=false`} onerror="this.closest('tr').remove()" style="max-width:160px" alt="Portada" />}
+  <Fila e="Autor" v={l.autor} />
+  <Fila e="Género" v={l.genero} />
+  <Fila e="Editorial" v={l.editorial} />
+  <Fila e="Año" v={l.fecha} />
+  <Fila e="ISBN" v={l.isbn} />
+  <Fila e="Ubicación" v={l.localizacion} />
+  <Fila e="Observaciones" v={l.observaciones} />
+  <Fila e="Nº de registro" v={l.id} />
+</Infobox>

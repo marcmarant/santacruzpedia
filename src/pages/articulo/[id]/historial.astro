@@ -1,0 +1,33 @@
+---
+// Pestaña «Ver historial»: versiones del texto y artículos que enlazan aquí
+import Wiki from '../../../layouts/Wiki.astro';
+import { wiki } from '../../../lib/estado';
+import { historial, loQueEnlazaAqui } from '../../../lib/wiki';
+import { urlArticulo } from '../../../lib/urls';
+
+const articulo = wiki().porId.get(Astro.params.id!);
+if (!articulo) return Astro.rewrite('/404');
+const [versiones, enlazan] = await Promise.all([historial(articulo.id), loQueEnlazaAqui(articulo.id)]);
+const ESTADOS: Record<string, string> = { aprobada: 'Publicada', pendiente: 'Pendiente de revisión', rechazada: 'Rechazada' };
+---
+<Wiki titulo={`Historial de «${articulo.titulo}»`} articuloId={articulo.id} pestana="historial">
+  <h2>Versiones</h2>
+  <table class="wikitable">
+    <thead><tr><th>Versión</th><th>Fecha</th><th>Autor</th><th>Resumen</th><th>Estado</th></tr></thead>
+    <tbody>
+      {versiones.map(v => (
+        <tr>
+          <td>{v.id}{v.actual && <b> (actual)</b>}</td>
+          <td>{v.fecha.toLocaleString('es-ES')}</td>
+          <td>{v.autor}</td>
+          <td>{v.resumen}</td>
+          <td>{ESTADOS[v.estado] ?? v.estado}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <h2>Lo que enlaza aquí</h2>
+  {enlazan.length
+    ? <ul>{enlazan.map(a => <li><a href={urlArticulo(a.id)}>{a.titulo}</a></li>)}</ul>
+    : <p>Ningún artículo enlaza a este.</p>}
+</Wiki>

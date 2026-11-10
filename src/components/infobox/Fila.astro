@@ -1,0 +1,17 @@
+---
+// Fila de la ficha. Se oculta sola si no hay valor.
+//   <Fila e="Nombre" v={c.nombre} />                  valor simple
+//   <Fila e="Padrino" si={!!padrino}>…enlace…</Fila>  contenido propio (se muestra si `si` es verdadero)
+//   <Fila e="Decano" articulo="decano" …>              la etiqueta enlaza a ese artículo
+import EnlaceArticulo from '../EnlaceArticulo.astro';
+
+interface Props { e: string; v?: string | number | null; si?: boolean; articulo?: string }
+const { e, v, si, articulo } = Astro.props;
+const mostrar = si ?? (v != null && v !== '');
+---
+{mostrar && (
+  <tr>
+    <th>{articulo ? <EnlaceArticulo id={articulo}>{e}</EnlaceArticulo> : e}</th>
+    <td>{Astro.slots.has('default') ? <slot /> : v}</td>
+  </tr>
+)}

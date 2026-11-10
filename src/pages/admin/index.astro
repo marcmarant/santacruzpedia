@@ -1,0 +1,86 @@
+---
+// Panel de moderación: propuestas pendientes (aceptar / rechazar) y decisiones recientes.
+// El middleware solo deja pasar a usuarios con rol 'moderador'.
+import Wiki from '../../layouts/Wiki.astro';
+import Diff from '../../components/Diff.astro';
+import { propuestasPendientes, decisionesRecientes, aprobar, rechazar, LIMITES } from '../../lib/edicion';
+import { urlArticulo } from '../../lib/urls';
+import Check from '@lucide/astro/icons/check';
+import X from '@lucide/astro/icons/x';
+import CircleCheck from '@lucide/astro/icons/circle-check';
+import CircleX from '@lucide/astro/icons/circle-x';
+import PartyPopper from '@lucide/astro/icons/party-popper';
+
+const mod = Astro.locals.usuario!;
+let mensaje: { tipo: 'ok' | 'error'; texto: string } | null = null;
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const id = Number(f.get('revision'));
+  const accion = f.get('accion');
+  const error = accion === 'aprobar' ? await aprobar(id, mod)
+    : accion === 'rechazar' ? await rechazar(id, String(f.get('motivo') ?? ''), mod)
+    : 'Acción desconocida.';
+  if (error) mensaje = { tipo: 'error', texto: error };
+  else return Astro.redirect(`/admin?hecho=${accion === 'aprobar' ? 'aprobada' : 'rechazada'}`, 303);
+}
+const hecho = Astro.url.searchParams.get('hecho');
+if (hecho) mensaje = { tipo: 'ok', texto: `Propuesta ${hecho}.` };
+
+const [pendientes, recientes] = await Promise.all([propuestasPendientes(), decisionesRecientes()]);
+const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+---
+<Wiki titulo="Propuestas de cambio" admin="propuestas">
+  {mensaje && <div class:list={['ambox', mensaje.tipo]}>{mensaje.texto}</div>}
+
+  <h2>Propuestas pendientes ({pendientes.length})</h2>
+  {pendientes.length === 0 && <p class="con-icono"><PartyPopper class="icono" size={18} /> No hay propuestas pendientes de revisión.</p>}
+  {pendientes.map(p => {
+    const conflicto = p.basada_en !== p.revision_actual;
+    return (
+      <article class="propuesta">
+        <header>
+          <a href={urlArticulo(p.articulo_id)}><b>{p.titulo}</b></a>
+          <span class="nota"> · propuesta nº {p.id} de <b>{p.autor}</b>, {fmt(p.fecha)}</span>
+          {p.resumen && <div class="resumen">«{p.resumen}»</div>}
+        </header>
+        {conflicto && (
+          <div class="ambox error">
+            El artículo ha cambiado desde que se hizo esta propuesta. Si la apruebas, sustituirá a la versión actual
+            (se compara abajo con la versión actual).
+          </div>
+        )}
+        <Diff antes={p.contenido_actual ?? ''} despues={p.contenido} />
+        <details><summary>Ver el texto completo propuesto</summary><pre class="codigo">{p.contenido}</pre></details>
+        <form method="post" class="decision">
+          <input type="hidden" name="revision" value={p.id} />
+          <button class="primario" name="accion" value="aprobar"><Check class="icono" size={16} />Aceptar y publicar</button>
+          <input name="motivo" maxlength={LIMITES.motivo} placeholder="Motivo del rechazo (opcional)" />
+          <button class="peligro" name="accion" value="rechazar"><X class="icono" size={16} />Rechazar</button>
+        </form>
+      </article>
+    );
+  })}
+
+  <h2>Decisiones recientes</h2>
+  {recientes.length === 0 ? <p>Todavía no se ha revisado ninguna propuesta.</p> : (
+    <table class="wikitable">
+      <thead><tr><th>Nº</th><th>Artículo</th><th>Autor</th><th>Decisión</th><th>Por</th><th>Fecha</th><th>Motivo</th></tr></thead>
+      <tbody>
+        {recientes.map(r => (
+          <tr>
+            <td>{r.id}</td>
+            <td><a href={urlArticulo(r.articulo_id)}>{r.titulo}</a></td>
+            <td>{r.autor}</td>
+            <td>{r.estado === 'aprobada'
+              ? <span class="estado ok"><CircleCheck class="icono" size={15} /> Aprobada</span>
+              : <span class="estado no"><CircleX class="icono" size={15} /> Rechazada</span>}</td>
+            <td>{r.revisor}</td>
+            <td>{r.fecha_revision && fmt(r.fecha_revision)}</td>
+            <td>{r.motivo}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Wiki>

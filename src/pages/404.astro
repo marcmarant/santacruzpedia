@@ -1,0 +1,10 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+const que = decodeURIComponent(Astro.url.pathname.replace(/^\/(articulo\/)?/, ''));
+---
+<Wiki titulo="Página no encontrada">
+  <div class="ambox">
+    Santacruzpedia aún no tiene ninguna página llamada <b>{que}</b>.
+    Prueba a <a href={`/buscar?q=${encodeURIComponent(que)}`}>buscarla</a>.
+  </div>
+</Wiki>

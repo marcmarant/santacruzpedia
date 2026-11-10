@@ -1,0 +1,41 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+import Enlace from '../components/Enlace.astro';
+import { datos } from '../lib/estado';
+import { PROVINCIAS, PAISES } from '../lib/formato';
+import type { Colegial } from '../lib/datos';
+
+const d = datos();
+// zona (provincia o país) -> localidad -> colegiales
+const zonas = new Map<string, Map<string, Colegial[]>>();
+for (const c of d.cols.values()) {
+  if (!c.procedencia) continue;
+  const u = d.ubic.get(c.procedencia);
+  const zona = u?.provincia ? PROVINCIAS[u.provincia] : (u?.pais && PAISES[u.pais]) || 'Otros';
+  const locs = zonas.get(zona) ?? new Map<string, Colegial[]>();
+  locs.set(c.procedencia, [...(locs.get(c.procedencia) ?? []), c]);
+  zonas.set(zona, locs);
+}
+const total = (locs: Map<string, Colegial[]>) => [...locs.values()].reduce((s, x) => s + x.length, 0);
+const orden = [...zonas].sort((a, b) => total(b[1]) - total(a[1]));
+const max = orden.length ? total(orden[0][1]) : 1;
+---
+<Wiki titulo="Procedencias">
+  <p>De dónde vienen los colegiales.</p>
+  <div class="bars">
+    {orden.map(([zona, locs]) => <div><span>{zona}</span><i style={`width:${total(locs) / max * 100}%`}></i><b>{total(locs)}</b></div>)}
+  </div>
+  {orden.map(([zona, locs]) => (
+    <>
+      <h2>{zona}</h2>
+      <ul>
+        {[...locs].sort((a, b) => b[1].length - a[1].length).map(([loc, cs]) => (
+          <li>
+            <Enlace tipo="localidad" clave={loc}>{loc}</Enlace>:{' '}
+            {cs.map((c, i) => <>{i > 0 && ', '}<Enlace tipo="colegial" clave={c.id}>{c.mote}</Enlace></>)}
+          </li>
+        ))}
+      </ul>
+    </>
+  ))}
+</Wiki>

@@ -1,0 +1,24 @@
+---
+// Plantilla de las páginas públicas de acceso (login, invitación, solicitud): sin menú ni contenido de la wiki
+interface Props { titulo: string }
+const { titulo } = Astro.props;
+---
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>{titulo} - Santacruzpedia</title>
+  <link rel="icon" href="/logo.png" />
+  <link rel="stylesheet" href="/wiki.css?v=5" />
+  <script is:inline>if (localStorage.dark) document.documentElement.classList.add('dark');</script>
+</head>
+<body class="acceso">
+  <main class="tarjeta-acceso">
+    <div class="marca"><img src="/logo.png" alt="" /><div><b>Santacruzpedia</b><small>La enciclopedia del Mayor</small></div></div>
+    <h1>{titulo}</h1>
+    <slot />
+  </main>
+</body>
+</html>

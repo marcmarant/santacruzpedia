@@ -1,0 +1,37 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+import Enlace from '../components/Enlace.astro';
+import { datos } from '../lib/estado';
+import { PISOS } from '../lib/formato';
+import type { Habitacion } from '../lib/datos';
+
+const d = datos();
+const residente = (h: Habitacion) => h.historial.find(x => x.curso === d.actual)?.col;
+const resumen = (t: string | null) => !t ? '' : t.length > 90 ? t.slice(0, 90) + '…' : t;
+---
+<Wiki titulo="Habitaciones">
+  <p>El colegio cuenta con {d.habs.size} habitaciones repartidas en tres plantas.</p>
+  {[0, 1, 2].map(p => (
+    <>
+      <h2 id={`p${p}`}>{PISOS[p]}</h2>
+      <figure class="thumb"><img src={`/plano/${p}`} alt={`Plano de ${PISOS[p]}`} /><figcaption>Plano de {PISOS[p].toLowerCase()}</figcaption></figure>
+      <table class="wikitable sortable">
+        <thead><tr><th>Hab.</th><th>Superficie</th><th>Residente actual</th><th>Residentes históricos</th><th>Descripción</th></tr></thead>
+        <tbody>
+          {[...d.habs.values()].filter(h => h.piso === p).map(h => {
+            const r = residente(h);
+            return (
+              <tr>
+                <td><Enlace tipo="habitacion" clave={h.id}>Habitación {h.id}</Enlace></td>
+                <td>{h.superficie && `${h.superficie} m²`}</td>
+                <td>{r ? <Enlace tipo="colegial" clave={r.id}>{r.mote}</Enlace> : <i>Vacía</i>}</td>
+                <td>{h.historial.length}</td>
+                <td>{resumen(h.descripcion)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </>
+  ))}
+</Wiki>

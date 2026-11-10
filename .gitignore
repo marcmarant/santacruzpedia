@@ -1,0 +1,13 @@
+.astro/
+.claude/
+
+.env
+
+node_modules/
+dist/
+backups/
+
+node_modules/
+dist/
+backups/
+migrations/

@@ -1,0 +1,22 @@
+---
+// Galería de colegiales con foto, mote y una línea opcional debajo
+import type { Colegial } from '../lib/datos';
+import { articuloDe, urlArticulo } from '../lib/urls';
+import Foto from './Foto.astro';
+import Enlace from './Enlace.astro';
+
+interface Props { colegiales: Colegial[]; pie?: (c: Colegial) => string | null | undefined }
+const { colegiales, pie } = Astro.props;
+const urlDe = (c: Colegial) => { const a = articuloDe('colegial', c.id); return a ? urlArticulo(a.id) : undefined; };
+---
+<div class="gallery">
+  {colegiales.map(c => (
+    <div class="gal">
+      <a href={urlDe(c)}><Foto c={c} /></a>
+      <div>
+        <Enlace tipo="colegial" clave={c.id}>{c.mote}</Enlace>
+        {pie?.(c) && <><br /><small>{pie(c)}</small></>}
+      </div>
+    </div>
+  ))}
+</div>

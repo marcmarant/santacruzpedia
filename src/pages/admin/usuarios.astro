@@ -1,0 +1,118 @@
+---
+// Usuarios y accesos: solicitudes pendientes, invitaciones y cuentas existentes (solo moderadores)
+import Wiki from '../../layouts/Wiki.astro';
+import Enlace from '../../components/Enlace.astro';
+import { datos } from '../../lib/estado';
+import Check from '@lucide/astro/icons/check';
+import X from '@lucide/astro/icons/x';
+import Link from '@lucide/astro/icons/link';
+import {
+  solicitudesPendientes, resolverSolicitud, crearInvitacion, listarUsuarios, cambiarUsuario,
+} from '../../lib/auth';
+
+const yo = Astro.locals.usuario!;
+let mensaje: { tipo: 'ok' | 'error'; texto: string } | null = null;
+let enlaceInvitacion: { url: string; mote: string } | null = null;
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const accion = String(f.get('accion'));
+  let error: string | null = null;
+  if (accion === 'aprobar_solicitud' || accion === 'rechazar_solicitud') {
+    error = await resolverSolicitud(Number(f.get('id')), accion === 'aprobar_solicitud', yo);
+    if (!error) mensaje = { tipo: 'ok', texto: accion === 'aprobar_solicitud' ? 'Solicitud aprobada: ya puede iniciar sesión.' : 'Solicitud rechazada.' };
+  } else if (accion === 'invitar') {
+    const colegial = datos().cols.get(String(f.get('colegial')));
+    const rol = f.get('rol') === 'moderador' ? 'moderador' : 'lector';
+    if (!colegial) error = 'Elige un colegial.';
+    else {
+      const token = await crearInvitacion(colegial.id, rol, yo.id);
+      enlaceInvitacion = { url: new URL(`/invitacion/${token}`, Astro.url).href, mote: colegial.mote };
+    }
+  } else if (['activar', 'desactivar', 'hacer_moderador', 'hacer_lector'].includes(accion)) {
+    error = await cambiarUsuario(Number(f.get('id')), accion as any, yo);
+    if (!error) mensaje = { tipo: 'ok', texto: 'Cuenta actualizada.' };
+  }
+  if (error) mensaje = { tipo: 'error', texto: error };
+}
+
+const [solicitudes, usuarios] = await Promise.all([solicitudesPendientes(), listarUsuarios()]);
+const conCuenta = new Set(usuarios.map(u => u.colegial_id).filter(Boolean));
+const sinCuenta = [...datos().cols.values()].filter(c => !conCuenta.has(c.id)).sort((a, b) => a.mote.localeCompare(b.mote));
+const fmt = (f: Date | null) => f ? f.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+---
+<Wiki titulo="Usuarios y accesos" admin="usuarios">
+  {mensaje && <div class:list={['ambox', mensaje.tipo]}>{mensaje.texto}</div>}
+
+  {enlaceInvitacion && (
+    <div class="ambox ok">
+      <b>Invitación para {enlaceInvitacion.mote}.</b> Mándale este enlace (sirve una sola vez y caduca en 7 días;
+      no se volverá a mostrar):
+      <div class="enlace-copiar"><input readonly value={enlaceInvitacion.url} onclick="this.select()" /></div>
+    </div>
+  )}
+
+  <h2>Solicitudes de acceso ({solicitudes.length})</h2>
+  {solicitudes.length === 0 ? <p>No hay solicitudes pendientes.</p> : (
+    <table class="wikitable">
+      <thead><tr><th>Dice ser</th><th>Nombre que escribe</th><th>Nota</th><th>Fecha</th><th></th></tr></thead>
+      <tbody>
+        {solicitudes.map(s => (
+          <tr>
+            <td><Enlace tipo="colegial" clave={s.colegial_id}>{s.mote}</Enlace>{s.promocion && ` (${s.promocion})`}<br /><small>{s.nombre_colegial ?? 'sin nombre en la base de datos'}</small></td>
+            <td>{s.nombre}</td>
+            <td>{s.nota}</td>
+            <td>{fmt(s.fecha)}</td>
+            <td>
+              <form method="post" class="en-linea">
+                <input type="hidden" name="id" value={s.id} />
+                <button class="primario" name="accion" value="aprobar_solicitud"><Check class="icono" size={16} />Aprobar</button>
+                <button class="peligro" name="accion" value="rechazar_solicitud"><X class="icono" size={16} />Rechazar</button>
+              </form>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+
+  <h2>Invitar a un colegial</h2>
+  <form method="post" class="en-linea invitar">
+    <input type="hidden" name="accion" value="invitar" />
+    <select name="colegial" required>
+      <option value="">— Colegial sin cuenta —</option>
+      {sinCuenta.map(c => <option value={c.id}>{c.mote}{c.promo ? ` (${c.promo})` : ''}</option>)}
+    </select>
+    <select name="rol"><option value="lector">Lector</option><option value="moderador">Moderador</option></select>
+    <button class="primario"><Link class="icono" size={16} />Generar enlace de invitación</button>
+  </form>
+
+  <h2>Cuentas ({usuarios.length})</h2>
+  <table class="wikitable sortable">
+    <thead><tr><th>Usuario</th><th>Colegial</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th></th></tr></thead>
+    <tbody>
+      {usuarios.map(u => (
+        <tr>
+          <td><code>{u.usuario}</code></td>
+          <td>{u.colegial_id ? <Enlace tipo="colegial" clave={u.colegial_id}>{u.nombre}</Enlace> : u.nombre}</td>
+          <td>{u.rol === 'moderador' ? 'Moderador' : 'Lector'}</td>
+          <td>{u.activo ? 'Activa' : 'Desactivada'}</td>
+          <td>{fmt(u.ultimo_acceso)}</td>
+          <td>
+            {u.id === yo.id ? <small>(tú)</small> : (
+              <form method="post" class="en-linea">
+                <input type="hidden" name="id" value={u.id} />
+                {u.rol === 'lector'
+                  ? <button name="accion" value="hacer_moderador">Hacer moderador</button>
+                  : <button name="accion" value="hacer_lector">Quitar moderador</button>}
+                {u.activo
+                  ? <button class="peligro" name="accion" value="desactivar">Desactivar</button>
+                  : <button name="accion" value="activar">Activar</button>}
+              </form>
+            )}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</Wiki>

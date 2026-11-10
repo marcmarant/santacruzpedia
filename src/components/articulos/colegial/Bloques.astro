@@ -1,0 +1,80 @@
+---
+// Bloques automáticos de un colegial: {{trayectoria}} {{linaje}} {{eventos}} {{companeros}}
+import type { Colegial, Datos } from '../../../lib/datos';
+import { PISOS } from '../../../lib/formato';
+import Enlace from '../../Enlace.astro';
+import Foto from '../../Foto.astro';
+import Galeria from '../../Galeria.astro';
+import ArrowDown from '@lucide/astro/icons/arrow-down';
+
+interface Props { nombre: string; e: Colegial; d: Datos }
+const { nombre, e: c, d } = Astro.props;
+
+// cadena de padrinos hacia arriba (sin bucles)
+const linaje: Colegial[] = [];
+const vistos = new Set<string>();
+for (let p = c.pid ? d.cols.get(c.pid) : undefined; p && !vistos.has(p.id); p = p.pid ? d.cols.get(p.pid) : undefined) {
+  vistos.add(p.id); linaje.unshift(p);
+}
+const eventos = c.estancias.flatMap(x => d.cursos.get(x.curso)?.eventos ?? []);
+const companeros = c.promo == null ? [] : [...d.cols.values()].filter(x => x.promo === c.promo && x.id !== c.id);
+---
+{nombre === 'trayectoria' && c.estancias.length > 0 && (
+  <>
+    <h2>Trayectoria en el colegio</h2>
+    <table class="wikitable sortable">
+      <thead><tr><th>Curso</th><th>Habitación</th><th>Planta</th><th>Estudios</th><th>Director</th></tr></thead>
+      <tbody>
+        {c.estancias.map(x => {
+          const dir = d.cursos.get(x.curso)?.director;
+          const piso = x.hab != null ? d.habs.get(x.hab)?.piso : undefined;
+          return (
+            <tr>
+              <td><Enlace tipo="curso" clave={x.curso}>{x.curso}</Enlace></td>
+              <td>{x.hab != null ? <Enlace tipo="habitacion" clave={x.hab}>Habitación {x.hab}</Enlace> : '—'}</td>
+              <td>{piso != null ? PISOS[piso] : ''}</td>
+              <td>{x.estudio ? <Enlace tipo="estudio" clave={x.estudio}>{d.estudios.get(x.estudio)?.nombre}</Enlace> : '—'}</td>
+              <td>{dir ? <Enlace tipo="director" clave={dir.id}>{dir.nombre}</Enlace> : <i>Sin datos</i>}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </>
+)}
+
+{nombre === 'linaje' && (linaje.length > 0 || c.ahijados.length > 0) && (
+  <>
+    <h2>Linaje colegial</h2>
+    <div class="lineage">
+      {linaje.map(x => <><div class="node"><Foto c={x} /><Enlace tipo="colegial" clave={x.id}>{x.mote}</Enlace><small>{x.promo ?? ''}</small></div><div class="arrow"><ArrowDown size={18} /></div></>)}
+      <div class="node me"><Foto c={c} /><b>{c.mote}</b><small>{c.promo ?? ''}</small></div>
+      {c.ahijados.length > 0 && (
+        <>
+          <div class="arrow"><ArrowDown size={18} /></div>
+          <div class="kids">
+            {c.ahijados.map(x => <div class="node"><Foto c={x} /><Enlace tipo="colegial" clave={x.id}>{x.mote}</Enlace><small>{x.promo ?? ''}</small></div>)}
+          </div>
+        </>
+      )}
+    </div>
+  </>
+)}
+
+{nombre === 'eventos' && c.estancias.length > 0 && (
+  <>
+    <h2>Eventos durante su estancia</h2>
+    <ul>
+      {eventos.length
+        ? eventos.map(ev => <li><Enlace tipo="evento" clave={`${ev.cursoid}|${ev.nombre}`}>{ev.nombre}</Enlace> ({ev.cursoid})</li>)
+        : <li>No hay eventos registrados en sus cursos.</li>}
+    </ul>
+  </>
+)}
+
+{nombre === 'companeros' && companeros.length > 0 && (
+  <>
+    <h2>Compañeros de promoción</h2>
+    <Galeria colegiales={companeros} />
+  </>
+)}

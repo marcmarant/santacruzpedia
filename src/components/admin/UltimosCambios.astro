@@ -1,0 +1,27 @@
+---
+// Últimos registros añadidos o modificados desde el panel (tabla wiki.cambio_datos)
+import { ultimosCambios, codificarClave } from '../../lib/registros';
+import { tablas } from '../../lib/esquema';
+
+const [cambios, ts] = await Promise.all([ultimosCambios(), tablas()]);
+const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+---
+{cambios.length > 0 && (
+  <>
+    <h2>Últimos cambios en los datos</h2>
+    <table class="wikitable">
+      <thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Tabla</th><th>Registro</th></tr></thead>
+      <tbody>
+        {cambios.map(c => (
+          <tr>
+            <td>{fmt(c.fecha)}</td>
+            <td>{c.usuario}</td>
+            <td>{c.accion === 'insertar' ? 'Añadido' : 'Modificado'}</td>
+            <td>{ts.get(c.tabla)?.titulo ?? c.tabla}</td>
+            <td><a href={`/admin/modificar?${new URLSearchParams({ tabla: c.tabla, clave: codificarClave(c.clave) })}`}>{c.clave.join(' · ')}</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+)}

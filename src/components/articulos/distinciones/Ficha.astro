@@ -1,0 +1,69 @@
+---
+// Ficha de los artículos de premios (Diego de Muros, Víctor Verde, colegial de honor) y cargos (decano, consejero, consejo)
+import type { Datos } from '../../../lib/datos';
+import type { Articulo } from '../../../lib/wiki';
+import { ARTICULOS_ESPECIALES } from '../../../lib/bloques';
+import Infobox from '../../infobox/Infobox.astro';
+import Fila from '../../infobox/Fila.astro';
+import Enlace from '../../Enlace.astro';
+import EnlaceArticulo from '../../EnlaceArticulo.astro';
+import Foto from '../../Foto.astro';
+
+interface Props { articulo: Articulo; d: Datos }
+const { articulo, d } = Astro.props;
+const { tipo, premio } = ARTICULOS_ESPECIALES[articulo.id];
+const cursos = [...d.cursos.values()];
+
+// premios
+const galardones = premio ? d.premios.filter(p => p.tipo === premio) : [];
+const conCurso = galardones.filter(p => p.curso).sort((a, b) => a.curso!.localeCompare(b.curso!));
+const ultimo = conCurso.at(-1) ?? galardones.at(-1);
+
+// cargos
+const conDecano = cursos.filter(c => c.decano);
+const decanoActual = d.cursos.get(d.actual)?.decano;
+const consejoActual = d.cursos.get(d.actual)?.consejeros ?? [];
+const consejeros = new Set(cursos.flatMap(c => c.consejeros.map(x => x.id)));
+const conConsejo = cursos.filter(c => c.consejeros.length);
+---
+<Infobox titulo={articulo.titulo} pie={tipo === 'premio' && ultimo ? `Último galardonado: ${ultimo.col.mote}` : tipo === 'decano' && decanoActual ? `Decano actual: ${decanoActual.mote}` : null}>
+  {tipo === 'premio' && ultimo && <Foto slot="imagen" c={ultimo.col} perezosa={false} />}
+  {tipo === 'decano' && decanoActual && <Foto slot="imagen" c={decanoActual} perezosa={false} />}
+  {tipo !== 'premio' && !decanoActual && <img slot="imagen" src="/logo.png" style="width:140px" alt="" />}
+
+  <Fila e="Otorgado por" si><EnlaceArticulo id="colegio-mayor-santa-cruz">Colegio Mayor Santa Cruz</EnlaceArticulo></Fila>
+
+  {tipo === 'premio' && <>
+    <Fila e="Periodicidad" v={premio === 'colegial_de_honor' ? 'Sin periodicidad fija' : 'Anual (un galardonado por curso)'} />
+    <Fila e="Galardonados" v={galardones.length} />
+    <Fila e="Primera edición registrada" si={conCurso.length > 0}><Enlace tipo="curso" clave={conCurso[0]?.curso}>{conCurso[0]?.curso}</Enlace></Fila>
+    <Fila e="Último galardonado" si={!!ultimo}>
+      <Enlace tipo="colegial" clave={ultimo?.col.id}>{ultimo?.col.mote}</Enlace>{ultimo?.curso && <> (<Enlace tipo="curso" clave={ultimo.curso}>{ultimo.curso}</Enlace>)</>}
+    </Fila>
+  </>}
+
+  {tipo === 'decano' && <>
+    <Fila e="Duración" v="Un curso académico" />
+    <Fila e="Forma parte de" si><EnlaceArticulo id="consejo">Consejo</EnlaceArticulo></Fila>
+    <Fila e="Decano actual" si={!!decanoActual}><Enlace tipo="colegial" clave={decanoActual?.id}>{decanoActual?.mote}</Enlace> ({d.actual})</Fila>
+    <Fila e="Decanos registrados" v={conDecano.length} />
+  </>}
+
+  {tipo === 'consejero' && <>
+    <Fila e="Número por curso" v="4" />
+    <Fila e="Forma parte de" si><EnlaceArticulo id="consejo">Consejo</EnlaceArticulo></Fila>
+    <Fila e="Consejeros actuales" si={consejoActual.length > 0}>
+      {consejoActual.map((x, i) => <>{i > 0 && ', '}<Enlace tipo="colegial" clave={x.id}>{x.mote}</Enlace></>)}
+    </Fila>
+    <Fila e="Consejeros registrados" v={consejeros.size} />
+  </>}
+
+  {tipo === 'consejo' && <>
+    <Fila e="Miembros" si><EnlaceArticulo id="decano">Decano</EnlaceArticulo> y 4 <EnlaceArticulo id="consejero">consejeros</EnlaceArticulo></Fila>
+    <Fila e="Decano actual" si={!!decanoActual}><Enlace tipo="colegial" clave={decanoActual?.id}>{decanoActual?.mote}</Enlace></Fila>
+    <Fila e="Consejeros actuales" si={consejoActual.length > 0}>
+      {consejoActual.map((x, i) => <>{i > 0 && ', '}<Enlace tipo="colegial" clave={x.id}>{x.mote}</Enlace></>)}
+    </Fila>
+    <Fila e="Consejos registrados" v={conConsejo.length} />
+  </>}
+</Infobox>

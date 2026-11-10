@@ -1,0 +1,12 @@
+---
+// Destino de los enlaces rojos: el artículo todavía no existe
+import Wiki from '../../layouts/Wiki.astro';
+const titulo = Astro.url.searchParams.get('titulo') ?? '';
+Astro.response.status = 404;
+---
+<Wiki titulo={titulo || 'Artículo nuevo'}>
+  <div class="ambox">
+    Santacruzpedia aún no tiene un artículo llamado <b>{titulo}</b>. Pronto podrás proponerlo desde aquí.
+    Mientras tanto, prueba a <a href={`/buscar?q=${encodeURIComponent(titulo)}`}>buscarlo</a>.
+  </div>
+</Wiki>

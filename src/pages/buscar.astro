@@ -1,0 +1,36 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+import { wiki, datos } from '../lib/estado';
+import { buscar, coincidenciaExacta } from '../lib/busqueda';
+import { urlArticulo, urlFoto } from '../lib/urls';
+
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+if (!q) return Astro.redirect('/');
+
+const w = wiki();
+const exacto = coincidenciaExacta(w, q);
+if (exacto) {
+  const destino = urlArticulo(exacto.articulo.id) + (exacto.desde ? `?redirigido=${encodeURIComponent(exacto.desde)}` : '');
+  return Astro.redirect(destino);
+}
+const resultados = buscar(w, q);
+const d = datos();
+---
+<Wiki titulo="Resultados de la búsqueda">
+  <p>{resultados.length} resultados para «<b>{q}</b>».</p>
+  <ul class="results">
+    {resultados.map(r => {
+      const col = r.articulo.colegial_id ? d.cols.get(r.articulo.colegial_id) : undefined;
+      return (
+        <li>
+          {col && <img class="mini" loading="lazy" src={urlFoto(col.id)} alt="" />}
+          <div>
+            <a href={urlArticulo(r.articulo.id)}>{r.articulo.titulo}</a><br />
+            <small>{r.motivo}</small>
+            {r.fragmento && <div class="fragmento">{r.fragmento}</div>}
+          </div>
+        </li>
+      );
+    })}
+  </ul>
+</Wiki>

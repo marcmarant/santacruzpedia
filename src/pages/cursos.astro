@@ -1,0 +1,23 @@
+---
+import Wiki from '../layouts/Wiki.astro';
+import Enlace from '../components/Enlace.astro';
+import { datos } from '../lib/estado';
+import { esNovatoEn } from '../lib/datos';
+const d = datos();
+---
+<Wiki titulo="Cursos">
+  <table class="wikitable sortable">
+    <thead><tr><th>Curso</th><th>Director</th><th>Colegiales</th><th>Novatos</th><th>Eventos</th></tr></thead>
+    <tbody>
+      {[...d.cursos.values()].map(c => (
+        <tr>
+          <td><Enlace tipo="curso" clave={c.id}>{c.id}</Enlace></td>
+          <td>{c.director ? <Enlace tipo="director" clave={c.director.id}>{c.director.nombre}</Enlace> : <i>Sin datos</i>}</td>
+          <td>{c.miembros.length}</td>
+          <td>{c.miembros.filter(m => esNovatoEn(m.col, c.id)).length}</td>
+          <td>{c.eventos.length}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</Wiki>

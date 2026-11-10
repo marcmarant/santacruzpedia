@@ -1,0 +1,71 @@
+---
+// Bloques de un curso: {{eventos}} {{novatos}} {{colegiales_por_planta}}
+// y {{cargos_y_premios}}
+import type { Colegial, Curso, Datos } from '../../../lib/datos';
+import EnlaceArticulo from '../../EnlaceArticulo.astro';
+import ColegialConFoto from '../../ColegialConFoto.astro';
+import { esNovatoEn } from '../../../lib/datos';
+import { PISOS } from '../../../lib/formato';
+import Enlace from '../../Enlace.astro';
+import Galeria from '../../Galeria.astro';
+
+interface Props { nombre: string; e: Curso; d: Datos }
+const { nombre, e: c, d } = Astro.props;
+const novatos = c.miembros.filter(m => esNovatoEn(m.col, c.id)).map(m => m.col);
+const porPlanta = [0, 1, 2]
+  .map(p => ({ p, ms: c.miembros.filter(m => m.hab != null && d.habs.get(m.hab)?.piso === p).sort((a, b) => a.hab! - b.hab!) }))
+  .filter(x => x.ms.length);
+const sinHabitacion = c.miembros.filter(m => m.hab == null).map(m => m.col);
+const resumen = (t: string) => t.length > 120 ? t.slice(0, 120) + '…' : t;
+const premio = (tipo: string) => c.premios.find(p => p.tipo === tipo)?.col;
+const filasCargos = [
+  { articulo: 'decano', etiqueta: 'Decano', colegiales: c.decano ? [c.decano] : [] },
+  { articulo: 'consejo', etiqueta: 'Consejo', colegiales: c.consejeros },
+  { articulo: 'premio-diego-de-muros', etiqueta: 'Premio Diego de Muros', colegiales: [premio('diego_de_muros')].filter(Boolean) as Colegial[] },
+  { articulo: 'premio-victor-verde', etiqueta: 'Premio Víctor Verde', colegiales: [premio('victor_verde')].filter(Boolean) as Colegial[] },
+].filter(f => f.colegiales.length);
+---
+{nombre === 'cargos_y_premios' && filasCargos.length > 0 && (
+  <>
+    <h2>Cargos y premios</h2>
+    <table class="wikitable">
+      <tbody>
+        {filasCargos.map(f => (
+          <tr>
+            <th><EnlaceArticulo id={f.articulo}>{f.etiqueta}</EnlaceArticulo></th>
+            <td>{f.colegiales.map((x, i) => <>{i > 0 && ' '}<ColegialConFoto c={x} /></>)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+)}
+
+{nombre === 'eventos' && c.eventos.length > 0 && (
+  <>
+    <h2>Eventos</h2>
+    <ul>
+      {c.eventos.map(ev => <li><Enlace tipo="evento" clave={`${ev.cursoid}|${ev.nombre}`}>{ev.nombre}</Enlace>{ev.info && ` — ${resumen(ev.info)}`}</li>)}
+    </ul>
+  </>
+)}
+
+{nombre === 'novatos' && novatos.length > 0 && (
+  <>
+    <h2>Novatos</h2>
+    <Galeria colegiales={novatos} pie={n => n.pid ? `padrino: ${d.cols.get(n.pid)?.mote ?? n.pid}` : null} />
+  </>
+)}
+
+{nombre === 'colegiales_por_planta' && (
+  <>
+    <h2>Colegiales por planta</h2>
+    {porPlanta.map(({ p, ms }) => (
+      <>
+        <h3>{PISOS[p]}</h3>
+        <Galeria colegiales={ms.map(m => m.col)} pie={x => `hab. ${ms.find(m => m.col === x)?.hab}`} />
+      </>
+    ))}
+    {sinHabitacion.length > 0 && <><h3>Sin habitación registrada</h3><Galeria colegiales={sinHabitacion} /></>}
+  </>
+)}

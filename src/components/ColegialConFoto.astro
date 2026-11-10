@@ -1,0 +1,10 @@
+---
+// Mote con una foto pequeña delante, para tablas. Sin colegial muestra «—».
+import type { Colegial } from '../lib/datos';
+import Enlace from './Enlace.astro';
+import Foto from './Foto.astro';
+
+interface Props { c?: Colegial | null }
+const { c } = Astro.props;
+---
+{c ? <span class="con-foto"><Foto c={c} clase="mini" /><Enlace tipo="colegial" clave={c.id}>{c.mote}</Enlace></span> : '—'}

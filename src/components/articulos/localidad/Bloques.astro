@@ -1,0 +1,10 @@
+---
+// Bloques de una localidad: {{colegiales}}
+import type { Ubicacion, Datos } from '../../../lib/datos';
+import Galeria from '../../Galeria.astro';
+
+interface Props { nombre: string; e: Ubicacion; d: Datos }
+const { nombre, e: u, d } = Astro.props;
+const cols = [...d.cols.values()].filter(c => c.procedencia === u.localidad);
+---
+{nombre === 'colegiales' && cols.length > 0 && <><h2>Colegiales</h2><Galeria colegiales={cols} /></>}

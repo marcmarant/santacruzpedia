@@ -1,0 +1,22 @@
+---
+import type { Habitacion, Datos } from '../../../lib/datos';
+import type { Articulo } from '../../../lib/wiki';
+import { PISOS } from '../../../lib/formato';
+import Infobox from '../../infobox/Infobox.astro';
+import Fila from '../../infobox/Fila.astro';
+import Enlace from '../../Enlace.astro';
+import Foto from '../../Foto.astro';
+
+interface Props { articulo: Articulo; e: Habitacion; d: Datos }
+const { articulo, e: h, d } = Astro.props;
+const residente = h.historial.find(x => x.curso === d.actual)?.col;
+---
+<Infobox titulo={articulo.titulo} pie={residente ? `Residente actual: ${residente.mote}` : null}>
+  {residente && <Foto slot="imagen" c={residente} perezosa={false} />}
+  <Fila e="Planta" v={h.piso != null ? PISOS[h.piso] : null} />
+  <Fila e="Superficie" v={h.superficie ? `${h.superficie} m²` : 'Desconocida'} />
+  <Fila e="Residente actual" si>{residente ? <Enlace tipo="colegial" clave={residente.id}>{residente.mote}</Enlace> : 'Vacía'}</Fila>
+  <Fila e="Residentes históricos" v={h.historial.length} />
+  <Fila e="Anterior" si={d.habs.has(h.id - 1)}><Enlace tipo="habitacion" clave={h.id - 1}>Habitación {h.id - 1}</Enlace></Fila>
+  <Fila e="Siguiente" si={d.habs.has(h.id + 1)}><Enlace tipo="habitacion" clave={h.id + 1}>Habitación {h.id + 1}</Enlace></Fila>
+</Infobox>

@@ -1,0 +1,9 @@
+---
+// Foto de un colegial (o silueta si no tiene)
+import type { Colegial } from '../lib/datos';
+import { urlFoto } from '../lib/urls';
+
+interface Props { c: Colegial; clase?: string; perezosa?: boolean }
+const { c, clase, perezosa = true } = Astro.props;
+---
+<img class={clase} loading={perezosa ? 'lazy' : 'eager'} src={urlFoto(c.id)} alt={c.mote} />

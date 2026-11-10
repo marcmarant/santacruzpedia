@@ -1,0 +1,82 @@
+---
+// Bloques de premios y cargos: {{galardonados}} {{decanos}} {{consejeros}} {{consejos}}
+import type { Colegial, Datos } from '../../../lib/datos';
+import type { Articulo } from '../../../lib/wiki';
+import { ARTICULOS_ESPECIALES } from '../../../lib/bloques';
+import Enlace from '../../Enlace.astro';
+import ColegialConFoto from '../../ColegialConFoto.astro';
+import Galeria from '../../Galeria.astro';
+
+interface Props { nombre: string; articulo: Articulo; d: Datos }
+const { nombre, articulo, d } = Astro.props;
+const premio = ARTICULOS_ESPECIALES[articulo.id]?.premio;
+const cursos = [...d.cursos.values()].reverse();   // del más reciente al más antiguo
+
+const galardones = premio ? d.premios.filter(p => p.tipo === premio).sort((a, b) => (b.curso ?? '').localeCompare(a.curso ?? '')) : [];
+
+// consejeros agrupados por colegial: Willy -> [2021-2022, 2022-2023, 2023-2024]
+const porConsejero = new Map<string, { c: Colegial; cursos: string[] }>();
+for (const cu of [...d.cursos.values()]) for (const x of cu.consejeros) {
+  const e = porConsejero.get(x.id) ?? { c: x, cursos: [] };
+  e.cursos.push(cu.id); porConsejero.set(x.id, e);
+}
+const consejeros = [...porConsejero.values()].sort((a, b) => b.cursos.length - a.cursos.length || b.cursos.at(-1)!.localeCompare(a.cursos.at(-1)!));
+---
+{nombre === 'galardonados' && (
+  <>
+    <h2>Galardonados</h2>
+    {galardones.length === 0 && <p>Todavía no hay galardonados registrados.</p>}
+    {premio === 'colegial_de_honor'
+      ? galardones.length > 0 && <Galeria colegiales={galardones.map(p => p.col)} pie={c => galardones.find(p => p.col === c)?.curso ? `nombrado en ${galardones.find(p => p.col === c)!.curso}` : null} />
+      : galardones.length > 0 && (
+        <table class="wikitable sortable">
+          <thead><tr><th>Curso</th><th>Galardonado</th><th>Promoción</th></tr></thead>
+          <tbody>{galardones.map(p => <tr><td><Enlace tipo="curso" clave={p.curso}>{p.curso}</Enlace></td><td><ColegialConFoto c={p.col} /></td><td>{p.col.promo ?? '—'}</td></tr>)}</tbody>
+        </table>
+      )}
+  </>
+)}
+
+{nombre === 'decanos' && (
+  <>
+    <h2>Decanos</h2>
+    <table class="wikitable sortable">
+      <thead><tr><th>Curso</th><th>Decano</th><th>Promoción</th></tr></thead>
+      <tbody>{cursos.filter(c => c.decano).map(c => <tr><td><Enlace tipo="curso" clave={c.id}>{c.id}</Enlace></td><td><ColegialConFoto c={c.decano} /></td><td>{c.decano!.promo ?? '—'}</td></tr>)}</tbody>
+    </table>
+  </>
+)}
+
+{nombre === 'consejeros' && (
+  <>
+    <h2>Consejeros</h2>
+    {consejeros.length === 0 ? <p>Todavía no hay consejeros registrados.</p> : (
+      <table class="wikitable sortable">
+        <thead><tr><th>Consejero</th><th>Cursos</th><th>Nº de cursos</th></tr></thead>
+        <tbody>
+          {consejeros.map(({ c, cursos }) => (
+            <tr><td><ColegialConFoto c={c} /></td><td>{cursos.map((x, i) => <>{i > 0 && ', '}<Enlace tipo="curso" clave={x}>{x}</Enlace></>)}</td><td>{cursos.length}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </>
+)}
+
+{nombre === 'consejos' && (
+  <>
+    <h2>Consejos por curso</h2>
+    <table class="wikitable">
+      <thead><tr><th>Curso</th><th>Decano</th><th>Consejeros</th></tr></thead>
+      <tbody>
+        {cursos.filter(c => c.decano || c.consejeros.length).map(c => (
+          <tr>
+            <td><Enlace tipo="curso" clave={c.id}>{c.id}</Enlace></td>
+            <td><ColegialConFoto c={c.decano} /></td>
+            <td>{c.consejeros.length ? c.consejeros.map((x, i) => <>{i > 0 && ', '}<Enlace tipo="colegial" clave={x.id}>{x.mote}</Enlace></>) : <i>Sin datos</i>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+)}

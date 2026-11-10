@@ -1,0 +1,22 @@
+---
+// Cuerpo de un artículo: ficha (datos) + texto (Markdown con [[enlaces]]) + bloques automáticos.
+// Se usa al leer el artículo y en la vista previa del editor (con `contenido` distinto del publicado).
+import Ficha from './Ficha.astro';
+import Bloque from './Bloque.astro';
+import { datos, wiki } from '../../lib/estado';
+import { entidadDe } from '../../lib/articulos';
+import { renderizarWikitexto } from '../../lib/wikitexto';
+import type { Articulo } from '../../lib/wiki';
+
+interface Props { articulo: Articulo; contenido?: string | null }
+const { articulo } = Astro.props;
+const contenido = Astro.props.contenido ?? articulo.contenido ?? '';
+const d = datos();
+const e = entidadDe(articulo, d);
+const { segmentos } = renderizarWikitexto(contenido, wiki());
+---
+<Ficha articulo={articulo} e={e} d={d} />
+{!contenido && <div class="ambox">Este artículo todavía no tiene texto. Puedes proponerlo desde la pestaña «Ver código», con el botón «Editar».</div>}
+{segmentos.map(s => s.tipo === 'html'
+  ? <Fragment set:html={s.html} />
+  : <Bloque nombre={s.nombre} articulo={articulo} e={e} d={d} />)}

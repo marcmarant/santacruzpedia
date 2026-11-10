@@ -1,0 +1,15 @@
+---
+// Bloques de un libro: {{otras_obras}}
+import type { Libro, Datos } from '../../../lib/datos';
+import Enlace from '../../Enlace.astro';
+
+interface Props { nombre: string; e: Libro; d: Datos }
+const { nombre, e: l, d } = Astro.props;
+const otras = l.autor ? d.libros.filter(x => x !== l && x.autor === l.autor) : [];
+---
+{nombre === 'otras_obras' && otras.length > 0 && (
+  <>
+    <h2>Otras obras de {l.autor} en la biblioteca</h2>
+    <ul>{otras.map(x => <li><Enlace tipo="libro" clave={x.id}><i>{x.titulo}</i></Enlace>{x.fecha && ` (${x.fecha})`}</li>)}</ul>
+  </>
+)}

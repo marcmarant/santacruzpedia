@@ -1,0 +1,55 @@
+---
+// Solicitud de acceso: quien no tiene invitación dice quién es y un moderador lo aprueba
+import Acceso from '../layouts/Acceso.astro';
+import { consulta } from '../lib/db';
+import { crearSolicitud } from '../lib/auth';
+import { validarContrasena, MIN_CONTRASENA } from '../lib/contrasenas';
+import ArrowLeft from '@lucide/astro/icons/arrow-left';
+
+// colegiales que todavía no tienen cuenta
+const libres = await consulta<{ id: string; mote: string; promocion: number | null }>(
+  `select c.id, c.mote, c.promocion from colegial c
+   where not exists (select 1 from wiki.usuario u where u.colegial_id = c.id)
+   order by c.mote`);
+
+let enviado = false, error: string | null = null;
+let v = { colegial: '', nombre: '', nota: '' };
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  v = { colegial: String(f.get('colegial') ?? ''), nombre: String(f.get('nombre') ?? ''), nota: String(f.get('nota') ?? '') };
+  const c = String(f.get('contrasena') ?? ''), r = String(f.get('repetir') ?? '');
+  error = !v.nombre.trim() ? 'Escribe tu nombre.' : validarContrasena(c, r);
+  error ??= await crearSolicitud(v.colegial, v.nombre, v.nota, c, Astro.clientAddress ?? null);
+  enviado = !error;
+}
+---
+<Acceso titulo="Solicitar acceso">
+  {enviado ? (
+    <div class="ambox ok">
+      <b>Solicitud enviada.</b> Cuando un moderador la apruebe podrás entrar con el usuario
+      <code>{v.colegial}</code> y la contraseña que has elegido.
+    </div>
+  ) : (
+    <>
+      <p class="nota">Para colegiales y excolegiales que no tienen invitación. Un moderador comprobará quién eres antes de darte acceso.</p>
+      {error && <div class="ambox error">{error}</div>}
+      <form method="post" class="formulario">
+        <label>¿Quién eres?
+          <select name="colegial" required>
+            <option value="">— Elige tu mote —</option>
+            {libres.map(c => <option value={c.id} selected={c.id === v.colegial}>{c.mote}{c.promocion ? ` (${c.promocion})` : ''}</option>)}
+          </select>
+        </label>
+        <label>Tu nombre y apellidos <input name="nombre" value={v.nombre} maxlength="100" required /></label>
+        <label>Algo que ayude a reconocerte (opcional)
+          <textarea name="nota" rows="3" maxlength="500" placeholder="Ej.: promoción 2010, habitación 12, ahijado de Flipi…">{v.nota}</textarea>
+        </label>
+        <label>Contraseña <input name="contrasena" type="password" minlength={MIN_CONTRASENA} autocomplete="new-password" required /></label>
+        <label>Repite la contraseña <input name="repetir" type="password" minlength={MIN_CONTRASENA} autocomplete="new-password" required /></label>
+        <button class="primario">Enviar solicitud</button>
+      </form>
+      <p class="nota">Si tu mote no aparece en la lista, es que ya tiene cuenta o no está en la base de datos: habla con un moderador.</p>
+    </>
+  )}
+  <p><a href="/login" class="con-icono"><ArrowLeft class="icono" size={16} /> Volver a iniciar sesión</a></p>
+</Acceso>

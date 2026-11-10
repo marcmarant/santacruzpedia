@@ -1,0 +1,36 @@
+---
+// Enlace de invitación: el colegial elige su contraseña y su cuenta queda creada
+import Acceso from '../../layouts/Acceso.astro';
+import { leerInvitacion, aceptarInvitacion } from '../../lib/auth';
+import { validarContrasena, MIN_CONTRASENA } from '../../lib/contrasenas';
+
+const token = Astro.params.token!;
+const inv = await leerInvitacion(token);
+let error: string | null = null;
+
+if (inv && Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const c = String(f.get('contrasena') ?? ''), r = String(f.get('repetir') ?? '');
+  error = validarContrasena(c, r) ?? await aceptarInvitacion(token, c, {
+    cookies: Astro.cookies, https: Astro.url.protocol === 'https:',
+    ip: Astro.clientAddress ?? null, navegador: Astro.request.headers.get('user-agent'),
+  });
+  if (!error) return Astro.redirect('/?bienvenida=1', 303);
+}
+---
+<Acceso titulo="Crear tu cuenta">
+  {!inv && <div class="ambox error">Esta invitación no es válida, ya se ha usado o ha caducado. Pide otra a un moderador.</div>}
+  {inv?.tiene_cuenta && <div class="ambox">Este colegial ya tiene cuenta. <a href="/login">Inicia sesión</a>.</div>}
+  {inv && !inv.tiene_cuenta && (
+    <>
+      <p>Te han invitado a Santacruzpedia como <b>{inv.mote}</b>{inv.nombre && ` (${inv.nombre})`}.</p>
+      <p>Tu usuario será <code>{inv.colegial_id}</code>. Elige una contraseña:</p>
+      {error && <div class="ambox error">{error}</div>}
+      <form method="post" class="formulario">
+        <label>Contraseña <input name="contrasena" type="password" minlength={MIN_CONTRASENA} autocomplete="new-password" required autofocus /></label>
+        <label>Repite la contraseña <input name="repetir" type="password" minlength={MIN_CONTRASENA} autocomplete="new-password" required /></label>
+        <button class="primario">Crear cuenta y entrar</button>
+      </form>
+    </>
+  )}
+</Acceso>

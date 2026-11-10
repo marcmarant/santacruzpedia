@@ -1,0 +1,47 @@
+---
+// Añadir registros a las tablas del colegio (no a las de la wiki)
+import Wiki from '../../layouts/Wiki.astro';
+import SelectorTabla from '../../components/admin/SelectorTabla.astro';
+import FormularioRegistro from '../../components/admin/FormularioRegistro.astro';
+import UltimosCambios from '../../components/admin/UltimosCambios.astro';
+import { tablas } from '../../lib/esquema';
+import { tabla, leerFormulario, insertar, despuesDeGuardar, codificarClave, type Valores } from '../../lib/registros';
+
+const todas = [...(await tablas()).values()];
+const t = await tabla(Astro.url.searchParams.get('tabla'));
+let errores: string[] = [];
+let valores: Valores = {};
+
+if (t && Astro.request.method === 'POST') {
+  const leido = leerFormulario(t, await Astro.request.formData());
+  valores = leido.valores;
+  errores = leido.errores;
+  if (!errores.length) {
+    const r = await insertar(t, valores, Astro.locals.usuario!);
+    if (r.error) errores = [r.error];
+    else {
+      const aviso = await despuesDeGuardar(t, true);
+      const params = new URLSearchParams({ tabla: t.nombre, clave: codificarClave(r.clave!), nuevo: '1' });
+      if (aviso) params.set('aviso', aviso);
+      return Astro.redirect(`/admin/modificar?${params}`, 303);
+    }
+  }
+}
+---
+<Wiki titulo="Añadir registros" admin="anadir">
+  <p class="nota">Añade datos a las tablas del colegio. Los artículos, propuestas y cuentas de la wiki no se tocan aquí: siguen su propio proceso.</p>
+  {!t && (
+    <>
+      <h2>¿En qué tabla?</h2>
+      <SelectorTabla tablas={todas} actual={null} ruta="/admin/anadir" />
+    </>
+  )}
+  {t && (
+    <>
+      <p><a href="/admin/anadir">Todas las tablas</a> · <b>{t.titulo}</b>{t.descripcion && <span class="nota"> — {t.descripcion}</span>}</p>
+      {errores.length > 0 && <div class="ambox error"><b>No se ha guardado:</b><ul>{errores.map(e => <li>{e}</li>)}</ul></div>}
+      <FormularioRegistro tabla={t} valores={valores} boton="Añadir registro" />
+    </>
+  )}
+  <UltimosCambios />
+</Wiki>

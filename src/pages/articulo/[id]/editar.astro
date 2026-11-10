@@ -1,0 +1,86 @@
+---
+// Editor: el lector cambia el texto y lo envía a revisión (queda como propuesta pendiente)
+import Wiki from '../../../layouts/Wiki.astro';
+import CuerpoArticulo from '../../../components/articulos/CuerpoArticulo.astro';
+import { wiki } from '../../../lib/estado';
+import { proponerCambio, pendientesDe, LIMITES } from '../../../lib/edicion';
+import { BLOQUES, tipoBloques } from '../../../lib/bloques';
+import { urlArticulo } from '../../../lib/urls';
+
+const articulo = wiki().porId.get(Astro.params.id!);
+if (!articulo) return Astro.rewrite('/404');
+
+let contenido = articulo.contenido ?? '';
+let resumen = '';
+let basadaEn = articulo.revision_actual;
+let errores: string[] = [];
+let vistaPrevia = false;
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  contenido = String(f.get('contenido') ?? '');
+  resumen = String(f.get('resumen') ?? '');
+  basadaEn = Number(f.get('basada_en')) || null;
+
+  if (f.get('accion') === 'previa') {
+    vistaPrevia = true;
+  } else {
+    errores = await proponerCambio({ articuloId: articulo.id, contenido, usuario: Astro.locals.usuario!, resumen, basadaEn, ip: Astro.clientAddress ?? null });
+    if (!errores.length) {
+      return Astro.redirect(`${urlArticulo(articulo.id)}/editar?enviado=1`, 303);
+    }
+  }
+}
+
+const enviado = Astro.url.searchParams.get('enviado') === '1';
+const pendientes = await pendientesDe(articulo.id);
+const bloques = BLOQUES[tipoBloques(articulo)] ?? [];
+const desactualizada = basadaEn !== articulo.revision_actual;
+---
+<Wiki titulo={`Editando «${articulo.titulo}»`} articuloId={articulo.id} pestana="codigo">
+  {enviado && (
+    <div class="ambox ok">
+      <b>¡Gracias! Tu propuesta se ha enviado a revisión.</b> Un moderador la revisará y, si la aprueba, se publicará en
+      el artículo. Puedes seguir su estado en <a href={`${urlArticulo(articulo.id)}/historial`}>Ver historial</a>.
+    </div>
+  )}
+  {errores.length > 0 && <div class="ambox error"><b>No se ha podido enviar:</b><ul>{errores.map(e => <li>{e}</li>)}</ul></div>}
+  {pendientes > 0 && !enviado && (
+    <div class="ambox">Este artículo tiene {pendientes} {pendientes === 1 ? 'propuesta pendiente' : 'propuestas pendientes'} de revisión.</div>
+  )}
+  {desactualizada && (
+    <div class="ambox error">El artículo ha cambiado desde que empezaste a editar. Revisa que tus cambios siguen teniendo sentido.</div>
+  )}
+
+  <form method="post" class="editor">
+    <input type="hidden" name="basada_en" value={basadaEn ?? ''} />
+    <label for="contenido">Texto del artículo</label>
+    <textarea id="contenido" name="contenido" rows="22" maxlength={LIMITES.contenido} spellcheck="true">{contenido}</textarea>
+    <details class="ayuda">
+      <summary>Cómo se escribe</summary>
+      <ul>
+        <li><code>**negrita**</code>, <code>*cursiva*</code>, <code>## Sección</code>, <code>- elemento de lista</code></li>
+        <li><code>[[Plato]]</code> enlaza a un artículo; <code>[[Habitación 21|su habitación]]</code> enlaza con otro texto</li>
+        <li><code>[[Categoría:Nombre]]</code> añade el artículo a una categoría</li>
+        <li>Bloques automáticos de este artículo: {bloques.length ? bloques.map((b, i) => <>{i > 0 && ', '}<code>{`{{${b}}}`}</code></>) : 'ninguno'}</li>
+      </ul>
+    </details>
+    <div class="campos">
+      <label>Resumen del cambio <input name="resumen" value={resumen} maxlength={LIMITES.resumen} placeholder="Ej.: añado la anécdota de la capea" /></label>
+      <label>Firmado como <input value={Astro.locals.usuario?.nombre} disabled /></label>
+    </div>
+    <div class="botones">
+      <button class="primario" name="accion" value="enviar">Enviar a revisión</button>
+      <button name="accion" value="previa" formnovalidate>Vista previa</button>
+      <a href={`${urlArticulo(articulo.id)}/codigo`}>Cancelar</a>
+    </div>
+  </form>
+
+  {vistaPrevia && (
+    <section class="vista-previa">
+      <h2>Vista previa</h2>
+      <p class="nota">Así quedaría el artículo. Todavía no se ha enviado.</p>
+      <div class="marco"><CuerpoArticulo articulo={articulo} contenido={contenido} /></div>
+    </section>
+  )}
+</Wiki>

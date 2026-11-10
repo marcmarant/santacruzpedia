@@ -1,0 +1,50 @@
+---
+// Formulario generado a partir de la estructura de una tabla (ver src/lib/esquema.ts).
+// Cada campo se llama c_<columna>. Las claves foráneas se muestran como desplegables.
+import type { Tabla } from '../../lib/esquema';
+import { opcionesReferencia, type Valores } from '../../lib/registros';
+
+interface Props { tabla: Tabla; valores?: Valores; boton: string }
+const { tabla, valores = {}, boton } = Astro.props;
+
+const opcionesFk = new Map<string, { valor: string; texto: string }[]>();
+for (const c of tabla.columnas) if (c.referencia) opcionesFk.set(c.nombre, await opcionesReferencia(c));
+
+const texto = (v: unknown) => v == null ? '' : v instanceof Date ? v.toISOString().slice(0, 10) : String(v);
+---
+<form method="post" class="formulario-registro">
+  {tabla.columnas.map(c => {
+    const v = texto(valores[c.nombre]);
+    const nombre = `c_${c.nombre}`;
+    const opciones = opcionesFk.get(c.nombre) ?? c.opciones;
+    return (
+      <label class:list={[{ ancho: c.tipo === 'texto_largo' }]}>
+        <span class="etiqueta">
+          {c.etiqueta}{c.obligatoria && <abbr title="Obligatorio">*</abbr>}
+          {tabla.clave.includes(c.nombre) && <small class="nota"> · clave</small>}
+        </span>
+        {c.automatica ? (
+          <input value={v || 'Se asigna automáticamente'} disabled />
+        ) : opciones ? (
+          <select name={nombre} required={c.obligatoria}>
+            <option value="">{c.obligatoria ? '— Elige —' : '— Ninguno —'}</option>
+            {opciones.map(o => <option value={o.valor} selected={o.valor === v}>{o.texto}</option>)}
+          </select>
+        ) : c.tipo === 'texto_largo' ? (
+          <textarea name={nombre} rows="5" required={c.obligatoria}>{v}</textarea>
+        ) : c.tipo === 'booleano' ? (
+          <input type="checkbox" name={nombre} checked={valores[c.nombre] === true} />
+        ) : (
+          <input
+            name={nombre} value={v} required={c.obligatoria}
+            type={c.tipo === 'entero' || c.tipo === 'decimal' ? 'number' : c.tipo === 'fecha' ? 'date' : 'text'}
+            step={c.tipo === 'decimal' ? 'any' : undefined}
+            maxlength={c.longitud ?? undefined}
+          />
+        )}
+        {c.ayuda && <small class="nota">{c.ayuda}</small>}
+      </label>
+    );
+  })}
+  <div class="botones"><slot name="ocultos" /><button class="primario">{boton}</button><slot name="extra" /></div>
+</form>

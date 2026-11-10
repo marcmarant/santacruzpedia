@@ -1,0 +1,54 @@
+---
+// Mis propuestas: los cambios que ha enviado el usuario, su estado y, si se rechazaron, el motivo.
+// Solo las ve su autor (se filtra por la cuenta de la sesión).
+import Wiki from '../layouts/Wiki.astro';
+import { misPropuestas } from '../lib/edicion';
+import { urlArticulo } from '../lib/urls';
+import Clock from '@lucide/astro/icons/clock';
+import CircleCheck from '@lucide/astro/icons/circle-check';
+import CircleX from '@lucide/astro/icons/circle-x';
+
+const propuestas = await misPropuestas(Astro.locals.usuario!.id);
+const cuenta = (e: string) => propuestas.filter(p => p.estado === e).length;
+const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+---
+<Wiki titulo="Mis propuestas">
+  <p>
+    Aquí puedes seguir los cambios que has propuesto en los artículos. Un moderador los revisa y decide si se publican.
+  </p>
+
+  {propuestas.length === 0 ? (
+    <div class="ambox">Todavía no has propuesto ningún cambio. Para hacerlo, entra en un artículo, abre «Ver código» y pulsa «Editar».</div>
+  ) : (
+    <>
+      <p class="resumen-propuestas">
+        <span class="estado pendiente"><Clock class="icono" size={15} /> {cuenta('pendiente')} pendientes</span>
+        <span class="estado ok"><CircleCheck class="icono" size={15} /> {cuenta('aprobada')} publicadas</span>
+        <span class="estado no"><CircleX class="icono" size={15} /> {cuenta('rechazada')} rechazadas</span>
+      </p>
+      <table class="wikitable mis-propuestas">
+        <thead><tr><th>Enviada</th><th>Artículo</th><th>Resumen</th><th>Estado</th><th>Motivo del rechazo</th></tr></thead>
+        <tbody>
+          {propuestas.map(p => (
+            <tr>
+              <td>{fmt(p.fecha)}</td>
+              <td><a href={urlArticulo(p.articulo_id)}>{p.titulo}</a></td>
+              <td>
+                {p.resumen ?? <span class="nota">(sin resumen)</span>}
+                <details><summary>Ver el texto propuesto</summary><pre class="codigo">{p.contenido}</pre></details>
+              </td>
+              <td>
+                {p.estado === 'pendiente' && <span class="estado pendiente"><Clock class="icono" size={15} /> Pendiente</span>}
+                {p.estado === 'aprobada' && <span class="estado ok"><CircleCheck class="icono" size={15} /> Publicada</span>}
+                {p.estado === 'rechazada' && <span class="estado no"><CircleX class="icono" size={15} /> Rechazada</span>}
+                {p.fecha_revision && <><br /><small class="nota">{fmt(p.fecha_revision)}</small></>}
+                {p.estado === 'aprobada' && !p.actual && <><br /><small class="nota">Ya hay una versión más reciente</small></>}
+              </td>
+              <td>{p.estado === 'rechazada' ? (p.motivo ?? <span class="nota">El moderador no indicó ningún motivo.</span>) : ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )}
+</Wiki>

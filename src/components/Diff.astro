@@ -1,0 +1,23 @@
+---
+// Diferencias entre dos textos: lo añadido en verde y lo quitado en rojo tachado.
+// Los párrafos sin cambios se resumen para que la revisión sea rápida.
+import { diffWordsWithSpace } from 'diff';
+
+interface Props { antes: string; despues: string }
+const { antes, despues } = Astro.props;
+const partes = diffWordsWithSpace(antes, despues);
+
+// recorta los trozos largos sin cambios dejando contexto alrededor
+const CONTEXTO = 160;
+const recortar = (t: string, i: number) => {
+  if (t.length <= CONTEXTO * 2) return t;
+  const primero = i === 0, ultimo = i === partes.length - 1;
+  if (primero) return '… ' + t.slice(-CONTEXTO);
+  if (ultimo) return t.slice(0, CONTEXTO) + ' …';
+  return t.slice(0, CONTEXTO) + '\n[…]\n' + t.slice(-CONTEXTO);
+};
+const anadido = partes.filter(p => p.added).reduce((n, p) => n + p.value.length, 0);
+const quitado = partes.filter(p => p.removed).reduce((n, p) => n + p.value.length, 0);
+---
+<div class="diff-resumen"><span class="mas">+{anadido}</span> <span class="menos">−{quitado}</span> caracteres</div>
+<pre class="diff">{partes.map((p, i) => p.added ? <ins>{p.value}</ins> : p.removed ? <del>{p.value}</del> : <span>{recortar(p.value, i)}</span>)}</pre>

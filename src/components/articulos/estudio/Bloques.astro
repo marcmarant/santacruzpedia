@@ -1,0 +1,10 @@
+---
+// Bloques de un estudio: {{colegiales}}
+import type { Estudio, Datos } from '../../../lib/datos';
+import Galeria from '../../Galeria.astro';
+
+interface Props { nombre: string; e: Estudio; d: Datos }
+const { nombre, e: est, d } = Astro.props;
+const cols = [...d.cols.values()].filter(c => c.estancias.some(x => x.estudio === est.id));
+---
+{nombre === 'colegiales' && cols.length > 0 && <><h2>Colegiales</h2><Galeria colegiales={cols} /></>}

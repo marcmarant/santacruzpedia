@@ -1,0 +1,99 @@
+---
+// Modificar registros de las tablas del colegio: buscar un registro y editarlo
+import Wiki from '../../layouts/Wiki.astro';
+import SelectorTabla from '../../components/admin/SelectorTabla.astro';
+import FormularioRegistro from '../../components/admin/FormularioRegistro.astro';
+import UltimosCambios from '../../components/admin/UltimosCambios.astro';
+import Pencil from '@lucide/astro/icons/pencil';
+import Search from '@lucide/astro/icons/search';
+import { tablas } from '../../lib/esquema';
+import {
+  tabla, listar, obtener, leerFormulario, modificar, despuesDeGuardar, codificarClave, decodificarClave, type Valores,
+} from '../../lib/registros';
+
+const p = Astro.url.searchParams;
+const todas = [...(await tablas()).values()];
+const t = await tabla(p.get('tabla'));
+const clave = decodificarClave(p.get('clave'));
+const buscar = p.get('buscar') ?? '';
+const pagina = Math.max(0, Number(p.get('pagina')) || 0);
+
+let errores: string[] = [];
+let valores: Valores | null = t && clave ? await obtener(t, clave) : null;
+
+if (t && clave && valores && Astro.request.method === 'POST') {
+  const leido = leerFormulario(t, await Astro.request.formData());
+  errores = leido.errores;
+  if (!errores.length) {
+    const r = await modificar(t, clave, leido.valores, Astro.locals.usuario!);
+    if (r.error) { errores = [r.error]; valores = { ...valores, ...leido.valores }; }
+    else {
+      await despuesDeGuardar(t, false);
+      return Astro.redirect(`/admin/modificar?${new URLSearchParams({ tabla: t.nombre, clave: codificarClave(r.clave!), guardado: '1' })}`, 303);
+    }
+  } else valores = { ...valores, ...leido.valores };
+}
+
+const lista = t && !clave ? await listar(t, buscar, pagina) : null;
+const POR_PAGINA = 50;
+const columnasLista = t ? t.columnas.slice(0, 6) : [];
+const mostrar = (v: unknown) => {
+  if (v == null) return '';
+  const s = v instanceof Date ? v.toISOString().slice(0, 10) : String(v);
+  return s.length > 60 ? s.slice(0, 60) + '…' : s;
+};
+const urlLista = (pag: number) => `/admin/modificar?${new URLSearchParams({ tabla: t?.nombre ?? '', buscar, pagina: String(pag) })}`;
+---
+<Wiki titulo="Modificar registros" admin="modificar">
+  <p class="nota">Modifica los datos de las tablas del colegio. Los artículos, propuestas y cuentas de la wiki no se tocan aquí: siguen su propio proceso.</p>
+
+  {!t && (
+    <>
+      <h2>¿En qué tabla?</h2>
+      <SelectorTabla tablas={todas} actual={null} ruta="/admin/modificar" />
+    </>
+  )}
+
+  {t && !clave && lista && (
+    <>
+      <p><a href="/admin/modificar">Todas las tablas</a> · <b>{t.titulo}</b>{t.descripcion && <span class="nota"> — {t.descripcion}</span>}</p>
+      <form method="get" class="en-linea buscar-registros">
+        <input type="hidden" name="tabla" value={t.nombre} />
+        <input name="buscar" value={buscar} placeholder="Buscar en cualquier columna…" />
+        <button><Search class="icono" size={16} />Buscar</button>
+      </form>
+      <p class="nota">{lista.total} {lista.total === 1 ? 'registro' : 'registros'}{buscar && ` que contienen «${buscar}»`}.</p>
+      <table class="wikitable">
+        <thead><tr>{columnasLista.map(c => <th>{c.etiqueta}</th>)}<th></th></tr></thead>
+        <tbody>
+          {lista.filas.map(f => (
+            <tr>
+              {columnasLista.map(c => <td>{mostrar(f[c.nombre])}</td>)}
+              <td><a class="con-icono" href={`/admin/modificar?${new URLSearchParams({ tabla: t.nombre, clave: codificarClave(t.clave.map(k => f[k])) })}`}><Pencil class="icono" size={15} />Editar</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {lista.total > POR_PAGINA && (
+        <p class="paginas">
+          {pagina > 0 && <a href={urlLista(pagina - 1)}>Anteriores</a>}
+          <span class="nota">Página {pagina + 1} de {Math.ceil(lista.total / POR_PAGINA)}</span>
+          {(pagina + 1) * POR_PAGINA < lista.total && <a href={urlLista(pagina + 1)}>Siguientes</a>}
+        </p>
+      )}
+    </>
+  )}
+
+  {t && clave && (
+    <>
+      <p><a href="/admin/modificar">Todas las tablas</a> · <a href={`/admin/modificar?tabla=${t.nombre}`}>{t.titulo}</a> · <b>{clave.join(' · ')}</b></p>
+      {p.get('nuevo') && <div class="ambox ok">Registro añadido. {p.get('aviso')}</div>}
+      {p.get('guardado') && <div class="ambox ok">Cambios guardados.</div>}
+      {errores.length > 0 && <div class="ambox error"><b>No se ha guardado:</b><ul>{errores.map(e => <li>{e}</li>)}</ul></div>}
+      {!valores && <div class="ambox error">Ese registro no existe.</div>}
+      {valores && <FormularioRegistro tabla={t} valores={valores} boton="Guardar cambios" />}
+    </>
+  )}
+
+  <UltimosCambios />
+</Wiki>

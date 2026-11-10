@@ -1,0 +1,33 @@
+---
+// Pinta un bloque automático {{nombre}} según el tipo de artículo.
+// Si el nombre no existe para ese tipo, se muestra en rojo para que quien edite lo vea.
+import type { Datos } from '../../lib/datos';
+import type { Articulo } from '../../lib/wiki';
+import { BLOQUES, ARTICULOS_ESPECIALES, tipoBloques } from '../../lib/bloques';
+import BloquesColegial from './colegial/Bloques.astro';
+import BloquesCurso from './curso/Bloques.astro';
+import BloquesDirector from './director/Bloques.astro';
+import BloquesEvento from './evento/Bloques.astro';
+import BloquesHabitacion from './habitacion/Bloques.astro';
+import BloquesEstudio from './estudio/Bloques.astro';
+import BloquesLocalidad from './localidad/Bloques.astro';
+import BloquesLibro from './libro/Bloques.astro';
+import BloquesColegio from './colegio/Bloques.astro';
+import BloquesDistinciones from './distinciones/Bloques.astro';
+
+interface Props { nombre: string; articulo: Articulo; e: any; d: Datos }
+const { nombre, articulo, e, d } = Astro.props;
+const tipo = tipoBloques(articulo);
+const componentes: Record<string, any> = {
+  colegial: BloquesColegial, curso: BloquesCurso, director: BloquesDirector, evento: BloquesEvento,
+  habitacion: BloquesHabitacion, estudio: BloquesEstudio, localidad: BloquesLocalidad, libro: BloquesLibro,
+  colegio: BloquesColegio,
+  premio: BloquesDistinciones, decano: BloquesDistinciones, consejero: BloquesDistinciones, consejo: BloquesDistinciones,
+};
+const especial = articulo.id in ARTICULOS_ESPECIALES;   // no necesitan un dato vinculado
+const valido = BLOQUES[tipo]?.includes(nombre) && (e || especial);
+const Componente = valido ? componentes[tipo] : null;
+---
+{Componente
+  ? <Componente nombre={nombre} articulo={articulo} e={e} d={d} />
+  : <p><span class="new" title="Este bloque no existe para este tipo de artículo">{`{{${nombre}}}`}</span></p>}

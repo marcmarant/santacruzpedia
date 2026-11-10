@@ -1,0 +1,14 @@
+---
+// Lista de tablas para elegir con cuál trabajar
+import type { Tabla } from '../../lib/esquema';
+
+interface Props { tablas: Tabla[]; actual: string | null; ruta: string }
+const { tablas, actual, ruta } = Astro.props;
+---
+<div class="selector-tablas">
+  {tablas.map(t => (
+    <a href={`${ruta}?tabla=${t.nombre}`} class:list={[{ activa: t.nombre === actual }]} title={t.descripcion}>
+      <b>{t.titulo}</b><small>{t.descripcion}</small>
+    </a>
+  ))}
+</div>

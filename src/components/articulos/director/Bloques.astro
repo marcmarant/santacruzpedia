@@ -1,0 +1,16 @@
+---
+// Bloques de un director: {{colegiales}}
+import type { Colegial, Director, Datos } from '../../../lib/datos';
+import Galeria from '../../Galeria.astro';
+
+interface Props { nombre: string; e: Director; d: Datos }
+const { nombre, e: dir, d } = Astro.props;
+const cols = new Map<string, Colegial>();
+for (const c of d.cursos.values()) if (c.directorid === dir.id) for (const m of c.miembros) cols.set(m.col.id, m.col);
+---
+{nombre === 'colegiales' && cols.size > 0 && (
+  <>
+    <h2>Colegiales durante su mandato</h2>
+    <Galeria colegiales={[...cols.values()].sort((a, b) => a.mote.localeCompare(b.mote))} />
+  </>
+)}

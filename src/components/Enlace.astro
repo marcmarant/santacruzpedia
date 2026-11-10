@@ -1,0 +1,13 @@
+---
+// Enlace al artículo de un dato. Si el dato aún no tiene artículo, sale en rojo.
+//   <Enlace tipo="colegial" clave="2021plato">Plato</Enlace>
+import { articuloDe, urlArticulo } from '../lib/urls';
+import type { TipoArticulo } from '../lib/wiki';
+
+interface Props { tipo: TipoArticulo; clave: unknown }
+const { tipo, clave } = Astro.props;
+const a = articuloDe(tipo, clave);
+---
+{a
+  ? <a href={urlArticulo(a.id)} title={a.titulo}><slot /></a>
+  : <a class="new" title="Este dato todavía no tiene artículo"><slot /></a>}

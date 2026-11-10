@@ -1,0 +1,16 @@
+---
+// Bloques de un evento: {{otras_ediciones}}
+import type { Evento, Datos } from '../../../lib/datos';
+import { norm } from '../../../lib/formato';
+import Enlace from '../../Enlace.astro';
+
+interface Props { nombre: string; e: Evento; d: Datos }
+const { nombre, e: ev, d } = Astro.props;
+const otras = d.eventos.filter(x => x !== ev && norm(x.nombre) === norm(ev.nombre));
+---
+{nombre === 'otras_ediciones' && otras.length > 0 && (
+  <>
+    <h2>Otras ediciones</h2>
+    <ul>{otras.map(o => <li><Enlace tipo="evento" clave={`${o.cursoid}|${o.nombre}`}>{o.nombre}</Enlace> ({o.cursoid})</li>)}</ul>
+  </>
+)}

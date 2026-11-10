@@ -141,3 +141,8 @@ button,.boton{display:inline-flex;align-items:center}
 .resumen-propuestas{display:flex;gap:18px;flex-wrap:wrap}
 .mis-propuestas details{margin-top:4px;font-size:13px}.mis-propuestas details summary{cursor:pointer;color:var(--link)}
 .mis-propuestas pre.codigo{max-height:300px;overflow:auto;max-width:560px}
+/* botón ocupado mientras se guarda (ver wiki.js) */
+button.cargando{filter:brightness(.7);cursor:progress;pointer-events:none}
+button.cargando::before{content:"";width:13px;height:13px;flex:none;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:girar .7s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){button.cargando::before{animation-duration:2s}}

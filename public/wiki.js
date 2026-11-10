@@ -36,6 +36,22 @@ document.querySelectorAll('table.sortable th').forEach((th, i) => {
   });
 });
 
+// Formularios del panel que tardan en guardar: el botón muestra un spinner y no se puede pulsar dos veces
+document.querySelectorAll('form.formulario-registro').forEach(f => {
+  f.addEventListener('submit', e => {
+    const b = e.submitter || f.querySelector('button.primario');
+    if (f.dataset.enviando) { e.preventDefault(); return; }
+    f.dataset.enviando = '1';
+    b?.classList.add('cargando');
+    b?.setAttribute('aria-busy', 'true');
+  });
+});
+// al volver con el botón «Atrás» la página puede salir de la caché con el botón aún cargando
+addEventListener('pageshow', () => document.querySelectorAll('form[data-enviando]').forEach(f => {
+  delete f.dataset.enviando;
+  f.querySelectorAll('.cargando').forEach(b => { b.classList.remove('cargando'); b.removeAttribute('aria-busy'); });
+}));
+
 // Cuadros de filtro: <input data-filtro="selector de los elementos a filtrar">
 document.querySelectorAll('input[data-filtro]').forEach(inp => {
   inp.addEventListener('input', () => {

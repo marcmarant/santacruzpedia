@@ -1,26 +1,47 @@
 ---
-// Últimos registros añadidos o modificados desde el panel (tabla wiki.cambio_datos)
+// Últimos registros añadidos o modificados desde el panel (tabla wiki.cambio_datos).
+// El registro enlaza a su artículo (si lo tiene) y «Editar» abre el formulario de modificación.
 import { ultimosCambios, codificarClave } from '../../lib/registros';
 import { tablas } from '../../lib/esquema';
+import { articuloDe, urlArticulo } from '../../lib/urls';
+import type { TipoArticulo } from '../../lib/wiki';
+import Pencil from '@lucide/astro/icons/pencil';
 
 const [cambios, ts] = await Promise.all([ultimosCambios(), tablas()]);
 const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+
+/** tablas cuyos registros tienen artículo, y cómo se forma la clave del dato a partir de la clave primaria */
+const TIPOS: Record<string, [TipoArticulo, (clave: unknown[]) => string]> = {
+  colegial: ['colegial', c => String(c[0])], curso: ['curso', c => String(c[0])],
+  habitacion: ['habitacion', c => String(c[0])], evento: ['evento', c => `${c[0]}|${c[1]}`],
+  estudio: ['estudio', c => String(c[0])], director: ['director', c => String(c[0])],
+  ubicacion: ['localidad', c => String(c[0])], libro: ['libro', c => String(c[0])],
+  autor: ['autor', c => String(c[0])], tipo_evento: ['tipo_evento', c => String(c[0])],
+};
+const articulo = (tabla: string, clave: unknown[]) => {
+  const t = TIPOS[tabla];
+  return t ? articuloDe(t[0], t[1](clave)) : null;
+};
 ---
 {cambios.length > 0 && (
   <>
     <h2>Últimos cambios en los datos</h2>
     <table class="wikitable">
-      <thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Tabla</th><th>Registro</th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Tabla</th><th>Registro</th><th></th></tr></thead>
       <tbody>
-        {cambios.map(c => (
-          <tr>
-            <td>{fmt(c.fecha)}</td>
-            <td>{c.usuario}</td>
-            <td>{c.accion === 'insertar' ? 'Añadido' : 'Modificado'}</td>
-            <td>{ts.get(c.tabla)?.titulo ?? c.tabla}</td>
-            <td><a href={`/admin/modificar?${new URLSearchParams({ tabla: c.tabla, clave: codificarClave(c.clave) })}`}>{c.clave.join(' · ')}</a></td>
-          </tr>
-        ))}
+        {cambios.map(c => {
+          const a = articulo(c.tabla, c.clave);
+          return (
+            <tr>
+              <td>{fmt(c.fecha)}</td>
+              <td>{c.usuario}</td>
+              <td>{c.accion === 'insertar' ? 'Añadido' : 'Modificado'}</td>
+              <td>{ts.get(c.tabla)?.titulo ?? c.tabla}</td>
+              <td>{a ? <a href={urlArticulo(a.id)} title="Ver el artículo">{a.titulo}</a> : c.clave.join(' · ')}</td>
+              <td><a class="con-icono" href={`/admin/modificar?${new URLSearchParams({ tabla: c.tabla, clave: codificarClave(c.clave) })}`}><Pencil class="icono" size={15} />Editar</a></td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   </>

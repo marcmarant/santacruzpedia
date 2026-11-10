@@ -6,6 +6,9 @@ export default defineConfig({
   output: 'server',
   adapter: node({ mode: 'standalone' }),
   server: { port: 8090, host: true },
+  // Detrás de nginx/Cloudflare: se fía de X-Forwarded-Proto/Host solo para este dominio. Así la app sabe que
+  // la visita llega por https (cookie segura) y el control de origen de los formularios (login…) no da 403.
+  security: { allowedDomains: [{ hostname: 'wiki.cmusantacruz.org', protocol: 'https' }] },
   env: {
     schema: {
       PGHOST: envField.string({ context: 'server', access: 'secret', default: '100.107.17.5' }),

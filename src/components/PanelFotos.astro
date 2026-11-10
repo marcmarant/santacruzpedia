@@ -1,0 +1,31 @@
+---
+// Apartado «Fotos» del editor (editar un artículo y proponer uno nuevo). La lógica está en wiki.js:
+// cada foto se sube a /archivo/subir y luego se pone en el texto, en la galería o como foto principal.
+// Las fotos subidas y aún pendientes del usuario se listan al cargar (así no se pierden al pulsar «Vista previa»).
+import { vistaArchivo, LIMITES_FOTOS, type Archivo } from '../lib/archivos';
+
+interface Props {
+  imagen: Archivo | null;     // foto principal elegida ahora mismo
+  subidas: Archivo[];         // fotos pendientes del usuario
+}
+const { imagen, subidas } = Astro.props;
+const datos = JSON.stringify({ principal: imagen ? vistaArchivo(imagen) : null, subidas: subidas.map(vistaArchivo) });
+---
+<fieldset class="panel-fotos" data-panel-fotos>
+  <legend>Fotos</legend>
+  <input type="hidden" name="imagen" value={imagen?.nombre ?? ''} />
+  <div class="principal">
+    <span class="etiqueta">Foto principal (la de la ficha):</span>
+    <span data-principal-vista></span>
+    <button type="button" class="enlace" data-quitar-principal hidden>Quitar</button>
+  </div>
+  <label class="soltar" data-soltar>
+    <input type="file" accept="image/jpeg,image/png,image/webp" multiple data-elegir-fotos />
+    <span><b>Elige fotos</b> o arrástralas aquí</span>
+    <small class="nota">JPG, PNG o WebP, hasta {LIMITES_FOTOS.bytes / 1024 / 1024} MB cada una. Se les quitan los datos de la cámara y de ubicación.
+      Las fotos no se publican hasta que un moderador apruebe tu propuesta.</small>
+  </label>
+  <ul class="fotos-panel" data-lista-fotos></ul>
+  <noscript><p class="nota">Para subir fotos hace falta tener JavaScript activado.</p></noscript>
+  <script is:inline type="application/json" data-fotos-iniciales set:html={datos.replace(/</g, '\\u003c')}></script>
+</fieldset>

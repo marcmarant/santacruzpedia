@@ -1,9 +1,10 @@
 // Propuestas de cambio de los lectores y su revisión por los moderadores
 import { pool, consulta } from './db';
-import { analizarWikitexto } from './wikitexto';
+import { analizarWikitexto, fotosDelTexto } from './wikitexto';
 import { recargarWikiYa, wiki } from './estado';
 import { resolverTitulo } from './wiki';
 import type { Usuario } from './auth';
+import { borrarPendientes, claveNombre, moverAPropuesta, puedeVer, LIMITES_FOTOS, type Archivo } from './archivos';
 
 export const LIMITES = { contenido: 100_000, resumen: 300, motivo: 1000, propuestasPorHora: 10 };
 
@@ -11,6 +12,8 @@ export interface Propuesta {
   id: number; articulo_id: string; titulo: string; contenido: string; resumen: string | null; autor: string;
   fecha: Date; basada_en: number | null; revision_actual: number | null; contenido_actual: string | null;
   nuevo: boolean;                        // artículo nuevo (todavía sin versión publicada)
+  imagen_id: number | null;              // foto principal propuesta
+  imagen_actual_id: number | null;       // foto principal publicada
 }
 
 // ---------- lectores ----------
@@ -23,7 +26,36 @@ async function demasiadasPropuestas(u: Usuario) {
   return n >= LIMITES.propuestasPorHora;
 }
 
-export interface DatosPropuesta { articuloId: string; contenido: string; usuario: Usuario; resumen: string; basadaEn: number | null; ip: string | null }
+/**
+ * Fotos que usa una propuesta (en el texto, en galerías y la principal): tienen que existir y el usuario tiene que
+ * poder verlas (publicadas, o pendientes subidas por él). `imagen`: nombre de la foto principal ('' = sin foto).
+ */
+async function fotosDePropuesta(contenido: string, imagen: string, u: Usuario) {
+  const errores: string[] = [];
+  const nombres = fotosDelTexto(contenido);
+  if (imagen) nombres.push(imagen);
+  const claves = [...new Set(nombres.map(claveNombre))];
+  const filas = claves.length
+    ? await consulta<Archivo>(`select * from wiki.archivo where lower(nombre) = any($1)`, [claves])
+    : [];
+  const porClave = new Map(filas.map(a => [claveNombre(a.nombre), a]));
+  const ids: number[] = [], nuevas: number[] = [];
+  for (const n of new Set(nombres)) {
+    const a = porClave.get(claveNombre(n));
+    if (!a) { errores.push(`No hay ninguna foto llamada «${n}». Súbela desde el apartado «Fotos» o revisa cómo está escrito el nombre.`); continue; }
+    if (!puedeVer(a, u)) { errores.push(`La foto «${a.nombre}» todavía no está publicada.`); continue; }
+    if (!ids.includes(a.id)) ids.push(a.id);
+    if (a.estado === 'pendiente' && !nuevas.includes(a.id)) nuevas.push(a.id);
+  }
+  if (nuevas.length > LIMITES_FOTOS.porPropuesta) errores.push(`Una propuesta no puede llevar más de ${LIMITES_FOTOS.porPropuesta} fotos nuevas.`);
+  const imagenId = imagen ? porClave.get(claveNombre(imagen))?.id ?? null : null;
+  return { errores, ids, nuevas, imagenId };
+}
+
+export interface DatosPropuesta {
+  articuloId: string; contenido: string; usuario: Usuario; resumen: string; basadaEn: number | null; ip: string | null;
+  imagen?: string;                       // nombre de la foto principal ('' = sin foto; sin pasar = la que tenga)
+}
 
 /** valida y guarda una propuesta pendiente. Devuelve la lista de errores (vacía si todo fue bien) */
 export async function proponerCambio(p: DatosPropuesta): Promise<string[]> {
@@ -31,12 +63,18 @@ export async function proponerCambio(p: DatosPropuesta): Promise<string[]> {
   const contenido = p.contenido.replace(/\r\n/g, '\n').trim();
   const autor = p.usuario.nombre, resumen = p.resumen.trim();
   const articulo = wiki().porId.get(p.articuloId);
+  const imagenActual = articulo?.imagen_id != null ? wiki().archivosPorId.get(articulo.imagen_id)?.nombre ?? '' : '';
+  const imagen = (p.imagen ?? imagenActual).trim();
+  const fotos = await fotosDePropuesta(contenido, imagen, p.usuario);
 
   if (!articulo) errores.push('El artículo no existe.');
   if (resumen.length > LIMITES.resumen) errores.push(`El resumen no puede pasar de ${LIMITES.resumen} caracteres.`);
   if (!contenido) errores.push('El texto no puede quedar vacío.');
   if (contenido.length > LIMITES.contenido) errores.push(`El texto no puede pasar de ${LIMITES.contenido} caracteres.`);
-  if (articulo && contenido === (articulo.contenido ?? '').trim()) errores.push('No has cambiado nada del texto.');
+  if (articulo && contenido === (articulo.contenido ?? '').trim() && fotos.imagenId === (articulo.imagen_id ?? null) && !fotos.nuevas.length) {
+    errores.push('No has cambiado nada del artículo.');
+  }
+  errores.push(...fotos.errores);
   if (await demasiadasPropuestas(p.usuario)) errores.push(DEMASIADAS);
   if (errores.length) return errores;
 
@@ -44,16 +82,23 @@ export async function proponerCambio(p: DatosPropuesta): Promise<string[]> {
   try {
     await c.query('begin');
     const { rows: [rev] } = await c.query(
-      `insert into wiki.revision (articulo_id, contenido, resumen, autor, usuario_id, ip, basada_en, estado)
-       values ($1, $2, nullif($3, ''), $4, $5, $6, $7, 'pendiente') returning id`,
-      [p.articuloId, contenido, resumen, autor, p.usuario.id, p.ip, p.basadaEn]);
+      `insert into wiki.revision (articulo_id, contenido, resumen, autor, usuario_id, ip, basada_en, estado, imagen_id)
+       values ($1, $2, nullif($3, ''), $4, $5, $6, $7, 'pendiente', $8) returning id`,
+      [p.articuloId, contenido, resumen, autor, p.usuario.id, p.ip, p.basadaEn, fotos.imagenId]);
+    await ligarFotos(c, rev.id, fotos.ids);
     await c.query(`insert into wiki.registro (accion, articulo_id, revision_id, usuario, detalle) values ('proponer', $1, $2, $3, $4)`,
       [p.articuloId, rev.id, autor, resumen || null]);
     await c.query('commit');
   } catch (e) {
     await c.query('rollback'); throw e;
   } finally { c.release(); }
+  await moverAPropuesta(fotos.nuevas, articulo!);
   return [];
+}
+
+async function ligarFotos(c: { query: (sql: string, params: unknown[]) => Promise<unknown> }, revisionId: number, ids: number[]) {
+  if (ids.length) await c.query(
+    `insert into wiki.revision_archivo (revision_id, archivo_id) select $1, unnest($2::int[]) on conflict do nothing`, [revisionId, ids]);
 }
 
 // ---------- artículos nuevos ----------
@@ -70,7 +115,7 @@ export function idDesdeTitulo(titulo: string) {
   return s || 'articulo';
 }
 
-export interface DatosArticuloNuevo { titulo: string; contenido: string; resumen: string; usuario: Usuario; ip: string | null }
+export interface DatosArticuloNuevo { titulo: string; contenido: string; resumen: string; usuario: Usuario; ip: string | null; imagen?: string }
 
 /** valida y guarda la propuesta de un artículo nuevo. Devuelve la lista de errores (vacía si todo fue bien) */
 export async function proponerArticulo(p: DatosArticuloNuevo): Promise<string[]> {
@@ -79,6 +124,7 @@ export async function proponerArticulo(p: DatosArticuloNuevo): Promise<string[]>
   const contenido = p.contenido.replace(/\r\n/g, '\n').trim();
   const resumen = p.resumen.trim();
   const autor = p.usuario.nombre;
+  const fotos = await fotosDePropuesta(contenido, (p.imagen ?? '').trim(), p.usuario);
 
   if (!titulo) errores.push('Escribe el título del artículo.');
   if (titulo.length > LARGO_TITULO) errores.push(`El título no puede pasar de ${LARGO_TITULO} caracteres.`);
@@ -88,9 +134,11 @@ export async function proponerArticulo(p: DatosArticuloNuevo): Promise<string[]>
   if (!contenido) errores.push('El texto no puede quedar vacío.');
   if (contenido.length > LIMITES.contenido) errores.push(`El texto no puede pasar de ${LIMITES.contenido} caracteres.`);
   if (resumen.length > LIMITES.resumen) errores.push(`El resumen no puede pasar de ${LIMITES.resumen} caracteres.`);
+  errores.push(...fotos.errores);
   if (await demasiadasPropuestas(p.usuario)) errores.push(DEMASIADAS);
   if (errores.length) return errores;
 
+  let id = '';
   const c = await pool.connect();
   try {
     await c.query('begin');
@@ -99,7 +147,6 @@ export async function proponerArticulo(p: DatosArticuloNuevo): Promise<string[]>
       `select a.id, a.revision_actual,
               exists (select 1 from wiki.revision r where r.articulo_id = a.id and r.estado = 'pendiente') as pendiente
        from wiki.articulo a where lower(a.titulo) = lower($1) for update`, [titulo]);
-    let id: string;
     if (previo?.revision_actual != null) { await c.query('rollback'); return [`Ya existe un artículo llamado «${titulo}».`]; }
     if (previo?.pendiente) { await c.query('rollback'); return [`Ya hay una propuesta pendiente de un artículo llamado «${titulo}».`]; }
     if (previo) {
@@ -118,9 +165,10 @@ export async function proponerArticulo(p: DatosArticuloNuevo): Promise<string[]>
       await c.query(`insert into wiki.articulo (id, titulo, tipo) values ($1, $2, 'libre')`, [id, titulo]);
     }
     const { rows: [rev] } = await c.query(
-      `insert into wiki.revision (articulo_id, contenido, resumen, autor, usuario_id, ip, basada_en, estado)
-       values ($1, $2, nullif($3, ''), $4, $5, $6, null, 'pendiente') returning id`,
-      [id, contenido, resumen, autor, p.usuario.id, p.ip]);
+      `insert into wiki.revision (articulo_id, contenido, resumen, autor, usuario_id, ip, basada_en, estado, imagen_id)
+       values ($1, $2, nullif($3, ''), $4, $5, $6, null, 'pendiente', $7) returning id`,
+      [id, contenido, resumen, autor, p.usuario.id, p.ip, fotos.imagenId]);
+    await ligarFotos(c, rev.id, fotos.ids);
     await c.query(`insert into wiki.registro (accion, articulo_id, revision_id, usuario, detalle) values ('proponer', $1, $2, $3, $4)`,
       [id, rev.id, autor, `Artículo nuevo${resumen ? `: ${resumen}` : ''}`]);
     await c.query('commit');
@@ -129,6 +177,7 @@ export async function proponerArticulo(p: DatosArticuloNuevo): Promise<string[]>
     if (e?.code === '23505') return [`Ya hay un artículo o una propuesta con el título «${titulo}».`];
     throw e;
   } finally { c.release(); }
+  await moverAPropuesta(fotos.nuevas, { id, tipo: 'libre' });
   return [];
 }
 
@@ -156,7 +205,8 @@ export async function pendientesDe(articuloId: string) {
 export async function propuestasPendientes(): Promise<Propuesta[]> {
   return consulta<Propuesta>(
     `select r.id, r.articulo_id, a.titulo, r.contenido, r.resumen, r.autor, r.fecha, r.basada_en,
-            a.revision_actual, act.contenido as contenido_actual, a.revision_actual is null as nuevo
+            a.revision_actual, act.contenido as contenido_actual, a.revision_actual is null as nuevo,
+            r.imagen_id, act.imagen_id as imagen_actual_id
      from wiki.revision r
      join wiki.articulo a on a.id = r.articulo_id
      left join wiki.revision act on act.id = a.revision_actual
@@ -186,6 +236,15 @@ export async function aprobar(revisionId: number, mod: Usuario): Promise<string 
 
     await c.query(`update wiki.revision set estado = 'aprobada', revisada_por = $2, fecha_revision = now() where id = $1`, [r.id, mod.id]);
     await c.query(`update wiki.articulo set revision_actual = $1 where id = $2`, [r.id, r.articulo_id]);
+
+    // fotos: se publican las nuevas y se recalcula en qué artículos sale cada una
+    await c.query(
+      `update wiki.archivo set estado = 'publicado', articulo_id = coalesce(articulo_id, $2)
+       where estado = 'pendiente' and id in (select archivo_id from wiki.revision_archivo where revision_id = $1)`, [r.id, r.articulo_id]);
+    await c.query(`delete from wiki.archivo_uso where articulo_id = $1`, [r.articulo_id]);
+    await c.query(
+      `insert into wiki.archivo_uso (articulo_id, archivo_id)
+       select $2, archivo_id from wiki.revision_archivo where revision_id = $1 on conflict do nothing`, [r.id, r.articulo_id]);
 
     const { enlaces, categorias } = analizarWikitexto(r.contenido, wiki());
     await c.query(`delete from wiki.enlace where origen_id = $1`, [r.articulo_id]);
@@ -217,5 +276,12 @@ export async function rechazar(revisionId: number, motivo: string, mod: Usuario)
   await pool.query(
     `insert into wiki.registro (accion, articulo_id, revision_id, usuario, detalle)
      select 'rechazar', articulo_id, id, $2, nullif($3, '') from wiki.revision where id = $1`, [revisionId, mod.usuario, m]);
+  // fotos nuevas de la propuesta que no usa ninguna otra propuesta pendiente: se borran
+  const huerfanas = await consulta<{ id: number }>(
+    `select a.id from wiki.archivo a join wiki.revision_archivo ra on ra.archivo_id = a.id and ra.revision_id = $1
+     where a.estado = 'pendiente' and not exists (
+       select 1 from wiki.revision_archivo o join wiki.revision r on r.id = o.revision_id
+       where o.archivo_id = a.id and o.revision_id <> $1 and r.estado = 'pendiente')`, [revisionId]);
+  await borrarPendientes(huerfanas.map(h => h.id));
   return null;
 }

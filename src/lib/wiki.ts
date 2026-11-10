@@ -1,5 +1,6 @@
 // Artículos de la wiki (esquema wiki): índice por id, por título, por redirección y por dato vinculado
 import { consulta } from './db';
+import { archivosPublicados, claveNombre, type Archivo } from './archivos';
 
 export type TipoArticulo =
   | 'colegial' | 'curso' | 'habitacion' | 'evento' | 'tipo_evento' | 'estudio'
@@ -13,6 +14,7 @@ export interface Articulo {
   libro_id: number | null; autor_id: number | null;
   revision_actual: number | null;
   contenido: string | null;              // texto publicado (Markdown)
+  imagen_id: number | null;              // foto principal de la versión publicada (wiki.archivo)
   rev_fecha: Date | null; rev_autor: string | null;
 }
 
@@ -22,6 +24,9 @@ export interface Wiki {
   redirecciones: Map<string, { titulo: string; articulo: Articulo }>; // título en minúsculas
   porDato: Map<string, Articulo>;                                 // claveDato(tipo, clave)
   idsAntiguos: Map<string, string>;
+  archivos: Map<string, Archivo>;                                 // fotos publicadas, por nombre (claveNombre)
+  archivosPorId: Map<number, Archivo>;
+  archivosPorHuella: Map<string, Archivo>;
   cargado: Date;
 }
 
@@ -30,7 +35,7 @@ export const articuloBorrador = (id: string, titulo: string, contenido: string):
   id, titulo, tipo: 'libre', contenido,
   colegial_id: null, curso_id: null, habitacion_id: null, evento_curso: null, evento_nombre: null, tipo_evento_id: null,
   estudio_id: null, director_id: null, localidad: null, libro_id: null, autor_id: null,
-  revision_actual: null, rev_fecha: null, rev_autor: null,
+  revision_actual: null, rev_fecha: null, rev_autor: null, imagen_id: null,
 });
 
 /** clave para encontrar el artículo de un dato: claveDato('colegial', '2021plato') */
@@ -53,11 +58,12 @@ function claveDeArticulo(a: Articulo): string | null {
 }
 
 export async function cargarWiki(): Promise<Wiki> {
-  const [arts, redirs, antiguos] = await Promise.all([
-    consulta<Articulo>(`select a.*, r.contenido, r.fecha as rev_fecha, r.autor as rev_autor
+  const [arts, redirs, antiguos, fotos] = await Promise.all([
+    consulta<Articulo>(`select a.*, r.contenido, r.imagen_id, r.fecha as rev_fecha, r.autor as rev_autor
                         from wiki.articulo a join wiki.revision r on r.id = a.revision_actual`),  // sin publicar (propuestos): fuera
     consulta<{ titulo: string; articulo_id: string }>('select titulo, articulo_id from wiki.redireccion'),
     consulta<{ id_viejo: string; articulo_id: string }>('select id_viejo, articulo_id from wiki.id_antiguo'),
+    archivosPublicados(),
   ]);
   const porId = new Map(arts.map(a => [a.id, a]));
   const porDato = new Map<string, Articulo>();
@@ -70,6 +76,9 @@ export async function cargarWiki(): Promise<Wiki> {
     redirecciones,
     porDato,
     idsAntiguos: new Map(antiguos.map(x => [x.id_viejo, x.articulo_id])),
+    archivos: new Map(fotos.map(f => [claveNombre(f.nombre), f])),
+    archivosPorId: new Map(fotos.map(f => [f.id, f])),
+    archivosPorHuella: new Map(fotos.map(f => [f.huella, f])),
     cargado: new Date(),
   };
 }

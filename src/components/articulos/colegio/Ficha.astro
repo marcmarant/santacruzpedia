@@ -1,15 +1,17 @@
 ---
 // Ficha del artículo principal «Colegio Mayor Santa Cruz»
+import type { Archivo } from '../../../lib/archivos';
 import type { Datos } from '../../../lib/datos';
 import Infobox from '../../infobox/Infobox.astro';
 import Fila from '../../infobox/Fila.astro';
 import Enlace from '../../Enlace.astro';
 
-interface Props { d: Datos }
+interface Props { d: Datos; imagen?: Archivo | null }
 const { d } = Astro.props;
+const imagenPrincipal = Astro.props.imagen ?? null;   // foto principal del artículo (sustituye a la de la ficha)
 const curso = d.cursos.get(d.actual)!;
 ---
-<Infobox titulo="Colegio Mayor Santa Cruz" pie="Sello del colegio">
+<Infobox imagen={imagenPrincipal} titulo="Colegio Mayor Santa Cruz" pie="Sello del colegio">
   <img slot="imagen" src="/logo.png" style="width:180px" alt="Sello del colegio" />
   <Fila e="Sede" v="Cardenal Mendoza (masculina)" />
   <Fila e="Ciudad" v="Valladolid, España" />

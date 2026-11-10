@@ -1,0 +1,48 @@
+---
+// Página de una foto: /archivo/Cena_de_gala_2019.jpg — la foto en grande, su autor y licencia, quién la subió
+// y en qué artículos aparece. Las pendientes solo las ven quien las subió y los moderadores.
+import Wiki from '../../layouts/Wiki.astro';
+import { wiki } from '../../lib/estado';
+import { archivoPorNombre, claveNombre, credito, puedeVer, urlImagen, usosDe } from '../../lib/archivos';
+import { urlArticulo } from '../../lib/urls';
+
+const crudo = Astro.params.nombre ?? '';
+let nombre = crudo;
+try { nombre = decodeURIComponent(crudo); } catch { /* ya venía decodificado */ }
+const a = wiki().archivos.get(claveNombre(nombre)) ?? await archivoPorNombre(nombre);
+if (!a || !puedeVer(a, Astro.locals.usuario)) return Astro.rewrite('/404');
+
+const usos = a.estado === 'publicado' ? await usosDe(a.id) : [];
+const fecha = a.fecha.toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' });
+const esUrl = (s: string | null) => !!s && /^https?:\/\//i.test(s);
+---
+<Wiki titulo={`Archivo:${a.nombre}`}>
+  {a.estado === 'pendiente' && (
+    <div class="ambox">Esta foto está <b>pendiente de revisión</b>: solo la ves tú (o los moderadores) hasta que se apruebe la propuesta que la usa.</div>
+  )}
+  <figure class="archivo-grande">
+    <a href={urlImagen(a, 'original')} title="Ver la foto original"><img src={urlImagen(a, 1600)} alt={a.descripcion ?? a.nombre} /></a>
+    {a.descripcion && <figcaption>{a.descripcion}</figcaption>}
+  </figure>
+
+  <table class="wikitable ficha-archivo">
+    <tbody>
+      <tr><th>Autor</th><td>{a.autor || a.subido_por}</td></tr>
+      {a.licencia && <tr><th>Licencia</th><td>{a.licencia}</td></tr>}
+      {a.fuente && <tr><th>Origen</th><td>{esUrl(a.fuente) ? <a href={a.fuente} rel="noopener noreferrer" target="_blank">{a.fuente}</a> : a.fuente}</td></tr>}
+      <tr><th>Subida por</th><td>{a.subido_por}, el {fecha}</td></tr>
+      <tr><th>Tamaño original</th><td>{a.ancho} × {a.alto} px · <a href={urlImagen(a, 'original')}>ver original</a></td></tr>
+      <tr><th>Para usarla</th><td><code>[[Archivo:{a.nombre}]]</code></td></tr>
+    </tbody>
+  </table>
+  <p class="nota">{credito(a)}</p>
+
+  {a.estado === 'publicado' && (
+    <>
+      <h2>Artículos en los que aparece</h2>
+      {usos.length
+        ? <ul>{usos.map(u => <li><a href={urlArticulo(u.id)}>{u.titulo}</a></li>)}</ul>
+        : <p>Todavía no aparece en ningún artículo.</p>}
+    </>
+  )}
+</Wiki>

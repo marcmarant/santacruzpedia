@@ -6,11 +6,15 @@ import { wiki } from '../../../lib/estado';
 import { proponerCambio, pendientesDe, LIMITES } from '../../../lib/edicion';
 import { BLOQUES, tipoBloques } from '../../../lib/bloques';
 import { urlArticulo } from '../../../lib/urls';
+import PanelFotos from '../../../components/PanelFotos.astro';
+import { pendientesDeUsuario, claveNombre } from '../../../lib/archivos';
+import { buscarFoto } from '../../../lib/wikitexto';
 
 const articulo = wiki().porId.get(Astro.params.id!);
 if (!articulo) return Astro.rewrite('/404');
 
 let contenido = articulo.contenido ?? '';
+let imagenNombre = articulo.imagen_id != null ? wiki().archivosPorId.get(articulo.imagen_id)?.nombre ?? '' : '';
 let resumen = '';
 let basadaEn = articulo.revision_actual;
 let errores: string[] = [];
@@ -20,12 +24,13 @@ if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
   contenido = String(f.get('contenido') ?? '');
   resumen = String(f.get('resumen') ?? '');
+  imagenNombre = String(f.get('imagen') ?? '');
   basadaEn = Number(f.get('basada_en')) || null;
 
   if (f.get('accion') === 'previa') {
     vistaPrevia = true;
   } else {
-    errores = await proponerCambio({ articuloId: articulo.id, contenido, usuario: Astro.locals.usuario!, resumen, basadaEn, ip: Astro.clientAddress ?? null });
+    errores = await proponerCambio({ articuloId: articulo.id, contenido, usuario: Astro.locals.usuario!, resumen, basadaEn, imagen: imagenNombre, ip: Astro.clientAddress ?? null });
     if (!errores.length) {
       return Astro.redirect(`${urlArticulo(articulo.id)}/editar?enviado=1`, 303);
     }
@@ -36,6 +41,10 @@ const enviado = Astro.url.searchParams.get('enviado') === '1';
 const pendientes = await pendientesDe(articulo.id);
 const bloques = BLOQUES[tipoBloques(articulo)] ?? [];
 const desactualizada = basadaEn !== articulo.revision_actual;
+// fotos que ha subido el usuario y aún no se han publicado: se pueden usar en la vista previa
+const subidas = await pendientesDeUsuario(Astro.locals.usuario!.id);
+const extra = new Map(subidas.map(a => [claveNombre(a.nombre), a]));
+const imagen = imagenNombre ? buscarFoto(wiki(), imagenNombre, extra) : null;
 ---
 <Wiki titulo={`Editando «${articulo.titulo}»`} articuloId={articulo.id} pestana="codigo">
   {enviado && (
@@ -62,9 +71,12 @@ const desactualizada = basadaEn !== articulo.revision_actual;
         <li><code>**negrita**</code>, <code>*cursiva*</code>, <code>## Sección</code>, <code>- elemento de lista</code></li>
         <li><code>[[Plato]]</code> enlaza a un artículo; <code>[[Habitación 21|su habitación]]</code> enlaza con otro texto</li>
         <li><code>[[Categoría:Nombre]]</code> añade el artículo a una categoría</li>
+        <li><code>[[Archivo:Nombre.jpg]]</code> pone una foto (a la derecha); <code>[[Archivo:Nombre.jpg|izquierda|Pie de foto]]</code> con opciones: <code>izquierda</code>, <code>centro</code>, <code>grande</code></li>
+        <li><code>&lt;galeria&gt;</code> … <code>&lt;/galeria&gt;</code> hace una galería, con una foto por línea: <code>Archivo:Nombre.jpg|Pie</code>. Los botones del apartado «Fotos» lo escriben por ti.</li>
         <li>Bloques automáticos de este artículo: {bloques.length ? bloques.map((b, i) => <>{i > 0 && ', '}<code>{`{{${b}}}`}</code></>) : 'ninguno'}</li>
       </ul>
     </details>
+    <PanelFotos imagen={imagen} subidas={subidas.filter(a => !a.en_propuesta)} />
     <div class="campos">
       <label>Resumen del cambio <input name="resumen" value={resumen} maxlength={LIMITES.resumen} placeholder="Ej.: añado la anécdota de la capea" /></label>
       <label>Firmado como <input value={Astro.locals.usuario?.nombre} disabled /></label>
@@ -80,7 +92,7 @@ const desactualizada = basadaEn !== articulo.revision_actual;
     <section class="vista-previa">
       <h2>Vista previa</h2>
       <p class="nota">Así quedaría el artículo. Todavía no se ha enviado.</p>
-      <div class="marco"><CuerpoArticulo articulo={articulo} contenido={contenido} /></div>
+      <div class="marco"><CuerpoArticulo articulo={articulo} contenido={contenido} imagen={imagen} extra={extra} /></div>
     </section>
   )}
 </Wiki>

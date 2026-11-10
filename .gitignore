@@ -11,3 +11,6 @@ node_modules/
 dist/
 backups/
 migrations/
+
+# fotos subidas a la wiki en local (en el servidor van en /srv/santacruzpedia/archivos)
+datos/

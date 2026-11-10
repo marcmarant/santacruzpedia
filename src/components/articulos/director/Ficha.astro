@@ -1,17 +1,19 @@
 ---
+import type { Archivo } from '../../../lib/archivos';
 import type { Director, Datos } from '../../../lib/datos';
 import type { Articulo } from '../../../lib/wiki';
 import Infobox from '../../infobox/Infobox.astro';
 import Fila from '../../infobox/Fila.astro';
 import Enlace from '../../Enlace.astro';
 
-interface Props { articulo: Articulo; e: Director; d: Datos }
+interface Props { articulo: Articulo; e: Director; d: Datos; imagen?: Archivo | null }
 const { articulo, e: dir, d } = Astro.props;
+const imagenPrincipal = Astro.props.imagen ?? null;   // foto principal del artículo (sustituye a la de la ficha)
 const cursos = [...d.cursos.values()].filter(c => c.directorid === dir.id);
 const colegiales = new Set(cursos.flatMap(c => c.miembros.map(m => m.col.id)));
 const catedra = dir.catedra ? d.estudios.get(dir.catedra) : undefined;
 ---
-<Infobox titulo={articulo.titulo}>
+<Infobox imagen={imagenPrincipal} titulo={articulo.titulo}>
   <Fila e="Cargo" v="Director del Colegio Mayor Santa Cruz" />
   <Fila e="Cursos" si={cursos.length > 0}>{cursos.map((c, i) => <>{i > 0 && <br />}<Enlace tipo="curso" clave={c.id}>{c.id}</Enlace></>)}</Fila>
   <Fila e="Cátedra" si={!!catedra}><Enlace tipo="estudio" clave={catedra?.id}>{catedra?.nombre}</Enlace></Fila>

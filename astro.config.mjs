@@ -17,6 +17,8 @@ export default defineConfig({
       PGUSER: envField.string({ context: 'server', access: 'secret' }),
       PGPASSWORD: envField.string({ context: 'server', access: 'secret' }),
       REMOTE_ASSETS: envField.string({ context: 'server', access: 'public', default: 'http://100.107.17.5' }),
+      // carpeta de las fotos subidas a la wiki (relativa a la carpeta del proyecto, o absoluta)
+      ARCHIVOS_DIR: envField.string({ context: 'server', access: 'secret', default: 'datos/archivos' }),
     },
   },
 });

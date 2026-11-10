@@ -21,6 +21,9 @@ COPY --from=build /app/dist ./dist
 # scripts/: el panel lanza importar-articulos.mjs al añadir registros; fotos/: retratos locales (Diego de Muros…)
 COPY scripts ./scripts
 COPY fotos ./fotos
+# Fotos subidas a la wiki: en producción es el volumen «archivos» (ver docker-compose.yml). Se crea aquí con
+# el usuario node como dueño para que, al montarse el volumen vacío por primera vez, la app pueda escribir en él.
+RUN mkdir -p datos/archivos && chown -R node:node datos
 USER node
 EXPOSE 8090
 # Las credenciales de la base de datos (PGUSER, PGPASSWORD…) se pasan al arrancar, nunca van dentro de la imagen

@@ -7,15 +7,21 @@ import { datos, wiki } from '../../lib/estado';
 import { entidadDe } from '../../lib/articulos';
 import { renderizarWikitexto } from '../../lib/wikitexto';
 import type { Articulo } from '../../lib/wiki';
+import type { Archivo } from '../../lib/archivos';
 
-interface Props { articulo: Articulo; contenido?: string | null }
-const { articulo } = Astro.props;
+// En la vista previa y en moderación: `contenido` e `imagen` son los propuestos, y `extra` las fotos pendientes
+// que se pueden mostrar (por claveNombre). Si no se pasan, se usa lo publicado.
+interface Props { articulo: Articulo; contenido?: string | null; imagen?: Archivo | null; extra?: Map<string, Archivo> }
+const { articulo, extra } = Astro.props;
 const contenido = Astro.props.contenido ?? articulo.contenido ?? '';
 const d = datos();
+const w = wiki();
 const e = entidadDe(articulo, d);
-const { segmentos } = renderizarWikitexto(contenido, wiki());
+const imagen = Astro.props.imagen !== undefined ? Astro.props.imagen
+  : articulo.imagen_id != null ? w.archivosPorId.get(articulo.imagen_id) ?? null : null;
+const { segmentos } = renderizarWikitexto(contenido, w, extra);
 ---
-<Ficha articulo={articulo} e={e} d={d} />
+<Ficha articulo={articulo} e={e} d={d} imagen={imagen} />
 {!contenido && <div class="ambox">Este artículo todavía no tiene texto. Puedes proponerlo desde la pestaña «Ver código», con el botón «Editar».</div>}
 {segmentos.map(s => s.tipo === 'html'
   ? <Fragment set:html={s.html} />

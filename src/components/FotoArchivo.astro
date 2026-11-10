@@ -1,0 +1,15 @@
+---
+// Una foto subida a la wiki (wiki.archivo) que al pulsarla se abre en grande (ver wiki.js)
+import { urlArchivo, urlImagen, type Archivo, type Tamano } from '../lib/archivos';
+
+interface Props { a: Archivo; tam?: Tamano; perezosa?: boolean }
+const { a, tam = 800, perezosa = false } = Astro.props;
+const k = Math.min(1, tam / Math.max(a.ancho, a.alto));
+---
+<span class="foto-archivo">
+  <a class="foto-img" href={urlArchivo(a.nombre)} data-grande={urlImagen(a, 1600)} data-pie={a.descripcion ?? ''}>
+    <img src={urlImagen(a, tam)} width={Math.round(a.ancho * k)} height={Math.round(a.alto * k)} alt={a.descripcion ?? a.nombre}
+      loading={perezosa ? 'lazy' : 'eager'} />
+  </a>
+  {a.estado === 'pendiente' && <span class="marca-pendiente">Pendiente de revisión</span>}
+</span>

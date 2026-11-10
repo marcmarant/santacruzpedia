@@ -7,6 +7,7 @@ dist
 .git
 .claude
 backups
+datos
 legacy
 start.bat
 Dockerfile

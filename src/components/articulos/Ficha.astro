@@ -12,9 +12,12 @@ import FichaLocalidad from './localidad/Ficha.astro';
 import FichaLibro from './libro/Ficha.astro';
 import FichaColegio from './colegio/Ficha.astro';
 import FichaDistincion from './distinciones/Ficha.astro';
+import Infobox from '../infobox/Infobox.astro';
+import type { Archivo } from '../../lib/archivos';
 
-interface Props { articulo: Articulo; e: any; d: Datos }
-const { articulo, e, d } = Astro.props;
+// imagen: foto principal del artículo (si la tiene, sale en la ficha en lugar de la imagen por defecto)
+interface Props { articulo: Articulo; e: any; d: Datos; imagen?: Archivo | null }
+const { articulo, e, d, imagen = null } = Astro.props;
 
 // fichas de artículos vinculados a un dato (necesitan ese dato: e)
 const fichasDeDatos: Record<string, any> = {
@@ -23,7 +26,11 @@ const fichasDeDatos: Record<string, any> = {
 };
 const tipo = tipoBloques(articulo);
 const ConDato = e ? fichasDeDatos[articulo.tipo] : null;
+const distincion = ['premio', 'decano', 'consejero', 'consejo'].includes(tipo);
+// los artículos sin ficha propia (libres, estudios…) con foto principal tienen una ficha mínima: título y foto
+const soloFoto = imagen && tipo !== 'colegio' && !distincion && !ConDato;
 ---
-{tipo === 'colegio' && <FichaColegio d={d} />}
-{['premio', 'decano', 'consejero', 'consejo'].includes(tipo) && <FichaDistincion articulo={articulo} d={d} />}
-{ConDato && <ConDato articulo={articulo} e={e} d={d} />}
+{tipo === 'colegio' && <FichaColegio d={d} imagen={imagen} />}
+{distincion && <FichaDistincion articulo={articulo} d={d} imagen={imagen} />}
+{ConDato && <ConDato articulo={articulo} e={e} d={d} imagen={imagen} />}
+{soloFoto && <Infobox titulo={articulo.titulo} imagen={imagen} />}

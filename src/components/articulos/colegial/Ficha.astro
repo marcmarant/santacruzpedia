@@ -1,4 +1,5 @@
 ---
+import type { Archivo } from '../../../lib/archivos';
 import type { Colegial, Datos } from '../../../lib/datos';
 import type { Articulo } from '../../../lib/wiki';
 import { fecha, edad, norm, PROVINCIAS, PAISES, PREMIOS, CARGOS } from '../../../lib/formato';
@@ -12,8 +13,9 @@ import Foto from '../../Foto.astro';
 import EnlaceArticulo from '../../EnlaceArticulo.astro';
 import { ARTICULO_PREMIO, ARTICULO_CARGO } from '../../../lib/bloques';
 
-interface Props { articulo: Articulo; e: Colegial; d: Datos }
+interface Props { articulo: Articulo; e: Colegial; d: Datos; imagen?: Archivo | null }
 const { articulo, e: c, d } = Astro.props;
+const imagenPrincipal = Astro.props.imagen ?? null;   // foto principal del artículo (sustituye a la de la ficha)
 
 const u = c.procedencia ? d.ubic.get(c.procedencia) : undefined;
 const padrino = c.pid ? d.cols.get(c.pid) : undefined;
@@ -37,7 +39,7 @@ const promo = (x: Colegial) => x.promo ? String(x.promo) : 'promoción desconoci
   <div class="ambox">Este artículo sobre un colegial es un <b>esbozo</b>. Puedes ayudar a Santacruzpedia completando sus datos en la base de datos.</div>
 )}
 
-<Infobox titulo={articulo.titulo} pie={credito ?? c.nombre ?? c.mote}>
+<Infobox imagen={imagenPrincipal} titulo={articulo.titulo} pie={credito ?? c.nombre ?? c.mote}>
   <a slot="imagen" href={urlFoto(c.id)} target="_blank"><Foto c={c} perezosa={false} /></a>
   <Fila e="Nombre" v={c.nombre} />
   <Fila e="Mote" si><b>{c.mote}</b></Fila>

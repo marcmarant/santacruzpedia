@@ -21,6 +21,15 @@ En el servidor, con la carpeta del proyecto copiada (sin `node_modules`, `dist` 
 - Ver el registro: `docker compose logs -f`. Parar: `docker compose down`.
 - Importar artículos a mano: `docker compose exec santacruzpedia node scripts/importar-articulos.mjs`.
 - Las credenciales van en `.env` y no se copian a la imagen (ver `.dockerignore`).
+- **Fotos subidas:** se guardan en la carpeta del servidor `/srv/santacruzpedia/archivos` (montada en `/app/datos/archivos`),
+  no en la imagen, así que sobreviven a cada `docker compose up --build`. En local (sin Docker) van a `datos/archivos/`
+  (se puede cambiar con `ARCHIVOS_DIR` en `.env`).
+  - Crearla una vez antes del primer arranque (la app corre como el usuario `node`, uid 1000):
+    `sudo mkdir -p /srv/santacruzpedia/archivos && sudo chown 1000:1000 /srv/santacruzpedia/archivos`
+  - Copia de seguridad (junto con un `pg_dump` de la base de datos, que es donde están sus nombres y créditos):
+    `sudo tar czf archivos-$(date +%F).tgz -C /srv/santacruzpedia archivos`
+  - Estructura: `<tipo>/<artículo>/<nombre>-<huella>/` con `original.<jpg|png|webp>` y `1600.webp`, `800.webp`, `320.webp`;
+    las fotos subidas que aún no van en ninguna propuesta están en `pendientes/`.
 - La URL de las fotos (`REMOTE_ASSETS`) se fija al compilar: `docker compose build --build-arg REMOTE_ASSETS=http://otro-servidor`.
 
 ## Cómo funciona un artículo
@@ -31,8 +40,23 @@ Cada página `/articulo/<id>` tiene tres partes:
 2. **Texto**: Markdown guardado en `wiki.revision.contenido` (la versión publicada es `wiki.articulo.revision_actual`).
    - `[[Título]]` o `[[Título|texto]]` enlaza a otro artículo (rojo si no existe).
    - `[[Categoría:Nombre]]` añade una categoría.
+   - `[[Archivo:Foto.jpg|izquierda|Pie]]` pone una foto subida; `<galeria>` … `</galeria>` (una foto por línea) hace una galería.
 3. **Bloques automáticos**: `{{trayectoria}}`, `{{novatos}}`… se sustituyen por tablas y galerías generadas desde los datos.
    La lista de bloques de cada tipo está en `src/lib/bloques.ts`.
+
+## Fotos
+
+Los lectores suben fotos desde el editor (apartado «Fotos») al proponer un cambio o un artículo nuevo. Cada foto tiene
+un nombre propio en la wiki (`Archivo:Nombre.jpg`) y su página en `/archivo/Nombre.jpg`.
+
+- Al subirla se procesa (se gira según la cámara, se le quitan los datos EXIF y de ubicación y se generan 1600, 800 y
+  320 px en WebP) y queda **pendiente**: solo la ven quien la subió y los moderadores.
+- Viaja con la propuesta: al aprobarla se publica; al rechazarla se borra. Las que no se usan en ninguna propuesta se
+  borran a las 24 horas.
+- La **foto principal** (la de la ficha) se guarda en cada versión del artículo (`wiki.revision.imagen_id`), así que
+  sus cambios se revisan y quedan en el historial. Si un colegial no tiene, se usa su foto de perfil de siempre.
+- Tablas: `wiki.archivo`, `wiki.revision_archivo` (fotos de cada propuesta) y `wiki.archivo_uso` (dónde sale cada una).
+  Código: `src/lib/archivos.ts`.
 
 ## Edición y moderación
 

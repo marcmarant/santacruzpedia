@@ -1,11 +1,19 @@
 ---
 // Ficha lateral (infobox). Dentro van <Fila> y <Seccion>.
-interface Props { titulo: string; cursiva?: boolean; pie?: string | null }
-const { titulo, cursiva = false, pie } = Astro.props;
+// `imagen`: foto principal del artículo (wiki.archivo). Si la hay, sustituye a la imagen del slot «imagen»
+// (foto de perfil, logo…) y su descripción hace de pie.
+import type { Archivo } from '../../lib/archivos';
+import FotoArchivo from '../FotoArchivo.astro';
+
+interface Props { titulo: string; cursiva?: boolean; pie?: string | null; imagen?: Archivo | null }
+const { titulo, cursiva = false, imagen } = Astro.props;
+const pie = imagen ? imagen.descripcion : Astro.props.pie;
 ---
 <table class="infobox">
   <tr><th colspan="2" class="ib-title">{cursiva ? <i>{titulo}</i> : titulo}</th></tr>
-  {Astro.slots.has('imagen') && (
+  {imagen ? (
+    <tr><td colspan="2" class="ib-img"><FotoArchivo a={imagen} />{pie && <div class="ib-cap">{pie}</div>}</td></tr>
+  ) : Astro.slots.has('imagen') && (
     <tr><td colspan="2" class="ib-img"><slot name="imagen" />{pie && <div class="ib-cap">{pie}</div>}</td></tr>
   )}
   <slot />

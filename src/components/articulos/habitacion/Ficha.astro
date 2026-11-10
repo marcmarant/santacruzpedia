@@ -1,4 +1,5 @@
 ---
+import type { Archivo } from '../../../lib/archivos';
 import type { Habitacion, Datos } from '../../../lib/datos';
 import type { Articulo } from '../../../lib/wiki';
 import { PISOS } from '../../../lib/formato';
@@ -7,11 +8,12 @@ import Fila from '../../infobox/Fila.astro';
 import Enlace from '../../Enlace.astro';
 import Foto from '../../Foto.astro';
 
-interface Props { articulo: Articulo; e: Habitacion; d: Datos }
+interface Props { articulo: Articulo; e: Habitacion; d: Datos; imagen?: Archivo | null }
 const { articulo, e: h, d } = Astro.props;
+const imagenPrincipal = Astro.props.imagen ?? null;   // foto principal del artículo (sustituye a la de la ficha)
 const residente = h.historial.find(x => x.curso === d.actual)?.col;
 ---
-<Infobox titulo={articulo.titulo} pie={residente ? `Residente actual: ${residente.mote}` : null}>
+<Infobox imagen={imagenPrincipal} titulo={articulo.titulo} pie={residente ? `Residente actual: ${residente.mote}` : null}>
   {residente && <Foto slot="imagen" c={residente} perezosa={false} />}
   <Fila e="Planta" v={h.piso != null ? PISOS[h.piso] : null} />
   <Fila e="Superficie" v={h.superficie ? `${h.superficie} m²` : 'Desconocida'} />

@@ -13,6 +13,9 @@ import PartyPopper from '@lucide/astro/icons/party-popper';
 import FilePlus from '@lucide/astro/icons/file-plus';
 import CuerpoArticulo from '../../components/articulos/CuerpoArticulo.astro';
 import { articuloBorrador } from '../../lib/wiki';
+import FotoArchivo from '../../components/FotoArchivo.astro';
+import { archivosDeRevisiones, claveNombre, credito, urlArchivo, type Archivo } from '../../lib/archivos';
+import { wiki } from '../../lib/estado';
 
 const mod = Astro.locals.usuario!;
 let mensaje: { tipo: 'ok' | 'error'; texto: string } | null = null;
@@ -31,6 +34,9 @@ const hecho = Astro.url.searchParams.get('hecho');
 if (hecho) mensaje = { tipo: 'ok', texto: `Propuesta ${hecho}.` };
 
 const [pendientes, recientes] = await Promise.all([propuestasPendientes(), decisionesRecientes()]);
+// fotos de cada propuesta: las nuevas (pendientes) se revisan junto con el texto
+const fotosPorPropuesta = await archivosDeRevisiones(pendientes.map(p => p.id));
+const fotoPorId = (id: number | null, fotos: Archivo[]) => id == null ? null : fotos.find(a => a.id === id) ?? wiki().archivosPorId.get(id) ?? null;
 const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 ---
 <Wiki titulo="Propuestas de cambio" admin="propuestas">
@@ -40,6 +46,12 @@ const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeSt
   {pendientes.length === 0 && <p class="con-icono"><PartyPopper class="icono" size={18} /> No hay propuestas pendientes de revisión.</p>}
   {pendientes.map(p => {
     const conflicto = p.basada_en !== p.revision_actual;
+    const fotos = fotosPorPropuesta.get(p.id) ?? [];
+    const nuevas = fotos.filter(a => a.estado === 'pendiente');
+    const extra = new Map(fotos.map(a => [claveNombre(a.nombre), a]));
+    const imagen = fotoPorId(p.imagen_id, fotos);
+    const imagenAntes = fotoPorId(p.imagen_actual_id, fotos);
+    const cambiaPrincipal = (p.imagen_id ?? null) !== (p.imagen_actual_id ?? null) && !(p.nuevo && !p.imagen_id);
     return (
       <article class="propuesta">
         <header>
@@ -56,9 +68,39 @@ const fmt = (f: Date) => f.toLocaleString('es-ES', { dateStyle: 'medium', timeSt
           </div>
         )}
         {p.nuevo ? (
-          <div class="vista-previa"><div class="marco"><CuerpoArticulo articulo={articuloBorrador(p.articulo_id, p.titulo, p.contenido)} /></div></div>
+          <div class="vista-previa"><div class="marco"><CuerpoArticulo articulo={articuloBorrador(p.articulo_id, p.titulo, p.contenido)} imagen={imagen} extra={extra} /></div></div>
         ) : (
           <Diff antes={p.contenido_actual ?? ''} despues={p.contenido} />
+        )}
+        {(nuevas.length > 0 || cambiaPrincipal) && (
+          <div class="fotos-propuesta">
+            {cambiaPrincipal && (
+              <p class="cambio-principal">
+                <b>Foto principal:</b>
+                {imagenAntes ? <span class="mini"><FotoArchivo a={imagenAntes} tam={320} /> {imagenAntes.nombre}</span> : <i>ninguna</i>}
+                <span aria-hidden="true">→</span>
+                {imagen ? <span class="mini"><FotoArchivo a={imagen} tam={320} /> {imagen.nombre}</span> : <i>ninguna (se quita)</i>}
+              </p>
+            )}
+            {nuevas.length > 0 && (
+              <>
+                <h4>Fotos nuevas ({nuevas.length})</h4>
+                <ul class="fotos-panel">
+                  {nuevas.map(a => (
+                    <li class="subida">
+                      <FotoArchivo a={a} tam={320} />
+                      <div>
+                        <a href={urlArchivo(a.nombre)}><b>{a.nombre}</b></a>
+                        {a.descripcion && <div>{a.descripcion}</div>}
+                        <div class="nota">{credito(a)} · subida por {a.subido_por} · {a.ancho}×{a.alto} px, {Math.round(a.bytes / 1024)} KB</div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <p class="nota">Si apruebas la propuesta se publican estas fotos; si la rechazas, se borran.</p>
+              </>
+            )}
+          </div>
         )}
         <details><summary>Ver el texto completo propuesto</summary><pre class="codigo">{p.contenido}</pre></details>
         <form method="post" class="decision">

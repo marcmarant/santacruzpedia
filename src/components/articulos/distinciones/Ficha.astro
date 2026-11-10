@@ -1,5 +1,6 @@
 ---
 // Ficha de los artículos de premios (Diego de Muros, Víctor Verde, colegial de honor) y cargos (decano, consejero, consejo)
+import type { Archivo } from '../../../lib/archivos';
 import type { Datos } from '../../../lib/datos';
 import type { Articulo } from '../../../lib/wiki';
 import { ARTICULOS_ESPECIALES } from '../../../lib/bloques';
@@ -9,8 +10,9 @@ import Enlace from '../../Enlace.astro';
 import EnlaceArticulo from '../../EnlaceArticulo.astro';
 import Foto from '../../Foto.astro';
 
-interface Props { articulo: Articulo; d: Datos }
+interface Props { articulo: Articulo; d: Datos; imagen?: Archivo | null }
 const { articulo, d } = Astro.props;
+const imagenPrincipal = Astro.props.imagen ?? null;   // foto principal del artículo (sustituye a la de la ficha)
 const { tipo, premio } = ARTICULOS_ESPECIALES[articulo.id];
 const cursos = [...d.cursos.values()];
 
@@ -26,7 +28,7 @@ const consejoActual = d.cursos.get(d.actual)?.consejeros ?? [];
 const consejeros = new Set(cursos.flatMap(c => c.consejeros.map(x => x.id)));
 const conConsejo = cursos.filter(c => c.consejeros.length);
 ---
-<Infobox titulo={articulo.titulo} pie={tipo === 'premio' && ultimo ? `Último galardonado: ${ultimo.col.mote}` : tipo === 'decano' && decanoActual ? `Decano actual: ${decanoActual.mote}` : null}>
+<Infobox imagen={imagenPrincipal} titulo={articulo.titulo} pie={tipo === 'premio' && ultimo ? `Último galardonado: ${ultimo.col.mote}` : tipo === 'decano' && decanoActual ? `Decano actual: ${decanoActual.mote}` : null}>
   {tipo === 'premio' && ultimo && <Foto slot="imagen" c={ultimo.col} perezosa={false} />}
   {tipo === 'decano' && decanoActual && <Foto slot="imagen" c={decanoActual} perezosa={false} />}
   {tipo !== 'premio' && !decanoActual && <img slot="imagen" src="/logo.png" style="width:140px" alt="" />}

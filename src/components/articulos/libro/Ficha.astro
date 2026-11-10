@@ -1,13 +1,15 @@
 ---
+import type { Archivo } from '../../../lib/archivos';
 import type { Libro, Datos } from '../../../lib/datos';
 import type { Articulo } from '../../../lib/wiki';
 import Infobox from '../../infobox/Infobox.astro';
 import Fila from '../../infobox/Fila.astro';
 
-interface Props { articulo: Articulo; e: Libro; d: Datos }
+interface Props { articulo: Articulo; e: Libro; d: Datos; imagen?: Archivo | null }
 const { e: l } = Astro.props;
+const imagenPrincipal = Astro.props.imagen ?? null;   // foto principal del artículo (sustituye a la de la ficha)
 ---
-<Infobox titulo={l.titulo} cursiva>
+<Infobox imagen={imagenPrincipal} titulo={l.titulo} cursiva>
   {l.isbn && <img slot="imagen" src={`https://covers.openlibrary.org/b/isbn/${encodeURIComponent(l.isbn)}-M.jpg?default=false`} onerror="this.closest('tr').remove()" style="max-width:160px" alt="Portada" />}
   <Fila e="Autor" v={l.autor} />
   <Fila e="Género" v={l.genero} />

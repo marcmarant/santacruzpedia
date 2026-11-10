@@ -10,3 +10,7 @@ services:
     # Red del propio servidor: la app se conecta a PostgreSQL igual que si corriera fuera de Docker
     # (sin tocar pg_hba.conf) y queda accesible en http://<servidor>:8090
     network_mode: host
+    volumes:
+      # Fotos subidas a la wiki: viven en esta carpeta del servidor, no en la imagen, así que sobreviven a cada
+      # «docker compose up --build». Antes del primer arranque hay que crearla con dueño uid 1000 (ver README).
+      - /srv/santacruzpedia/archivos:/app/datos/archivos

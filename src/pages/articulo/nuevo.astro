@@ -7,10 +7,14 @@ import { wiki } from '../../lib/estado';
 import { resolverTitulo, articuloBorrador } from '../../lib/wiki';
 import { proponerArticulo, LIMITES, LARGO_TITULO } from '../../lib/edicion';
 import { urlArticulo } from '../../lib/urls';
+import PanelFotos from '../../components/PanelFotos.astro';
+import { pendientesDeUsuario, claveNombre } from '../../lib/archivos';
+import { buscarFoto } from '../../lib/wikitexto';
 
 let titulo = (Astro.url.searchParams.get('titulo') ?? '').trim();
 let contenido = '';
 let resumen = '';
+let imagenNombre = '';
 let errores: string[] = [];
 let vistaPrevia = false;
 const desdeEnlace = Astro.request.method === 'GET' && !!titulo;
@@ -26,15 +30,19 @@ if (Astro.request.method === 'POST') {
   titulo = String(f.get('titulo') ?? '');
   contenido = String(f.get('contenido') ?? '');
   resumen = String(f.get('resumen') ?? '');
+  imagenNombre = String(f.get('imagen') ?? '');
   if (f.get('accion') === 'previa') {
     vistaPrevia = true;
   } else {
-    errores = await proponerArticulo({ titulo, contenido, resumen, usuario: Astro.locals.usuario!, ip: Astro.clientAddress ?? null });
+    errores = await proponerArticulo({ titulo, contenido, resumen, imagen: imagenNombre, usuario: Astro.locals.usuario!, ip: Astro.clientAddress ?? null });
     if (!errores.length) return Astro.redirect('/mis-propuestas?enviado=articulo', 303);
   }
 }
 
 const borrador = articuloBorrador('vista-previa', titulo.trim() || 'Artículo nuevo', contenido);
+const subidas = await pendientesDeUsuario(Astro.locals.usuario!.id);
+const extra = new Map(subidas.map(a => [claveNombre(a.nombre), a]));
+const imagen = imagenNombre ? buscarFoto(wiki(), imagenNombre, extra) : null;
 ---
 <Wiki titulo="Proponer un artículo nuevo">
   {desdeEnlace && (
@@ -63,8 +71,11 @@ const borrador = articuloBorrador('vista-previa', titulo.trim() || 'Artículo nu
         <li><code>**negrita**</code>, <code>*cursiva*</code>, <code>## Sección</code>, <code>- elemento de lista</code></li>
         <li><code>[[Plato]]</code> enlaza a un artículo; <code>[[Habitación 21|su habitación]]</code> enlaza con otro texto</li>
         <li><code>[[Categoría:Nombre]]</code> añade el artículo a una categoría</li>
+        <li><code>[[Archivo:Nombre.jpg]]</code> pone una foto (a la derecha); <code>[[Archivo:Nombre.jpg|izquierda|Pie de foto]]</code> con opciones: <code>izquierda</code>, <code>centro</code>, <code>grande</code></li>
+        <li><code>&lt;galeria&gt;</code> … <code>&lt;/galeria&gt;</code> hace una galería, con una foto por línea: <code>Archivo:Nombre.jpg|Pie</code>. Los botones del apartado «Fotos» lo escriben por ti.</li>
       </ul>
     </details>
+    <PanelFotos imagen={imagen} subidas={subidas.filter(a => !a.en_propuesta)} />
     <div class="campos">
       <label>Resumen <input name="resumen" value={resumen} maxlength={LIMITES.resumen} placeholder="Ej.: artículo sobre la fiesta de mayo" /></label>
       <label>Firmado como <input value={Astro.locals.usuario?.nombre} disabled /></label>
@@ -80,7 +91,7 @@ const borrador = articuloBorrador('vista-previa', titulo.trim() || 'Artículo nu
     <section class="vista-previa">
       <h2>Vista previa: {borrador.titulo}</h2>
       <p class="nota">Así quedaría el artículo. Todavía no se ha enviado.</p>
-      <div class="marco"><CuerpoArticulo articulo={borrador} /></div>
+      <div class="marco"><CuerpoArticulo articulo={borrador} imagen={imagen} extra={extra} /></div>
     </section>
   )}
 </Wiki>

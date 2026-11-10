@@ -5,12 +5,15 @@
 import { defineMiddleware } from 'astro:middleware';
 import { asegurarCargado, datos } from './lib/estado';
 import { precargarFotos } from './lib/fotos';
+import { limpiarHuerfanos } from './lib/archivos';
 import { usuarioDeSesion } from './lib/auth';
 
-/** páginas que se pueden ver sin sesión */
-const PUBLICAS = [/^\/login$/, /^\/solicitar-acceso$/, /^\/invitacion\/[^/]+$/, /\.(css|js|png|ico|svg|jpg|webp)$/];
+/** páginas que se pueden ver sin sesión (y los ficheros estáticos de public/, que están en la raíz;
+ *  no /archivo/…/800.webp: las fotos subidas son solo para usuarios con sesión) */
+const PUBLICAS = [/^\/login$/, /^\/solicitar-acceso$/, /^\/invitacion\/[^/]+$/, /^\/[^/]+\.(css|js|png|ico|svg|jpg|webp)$/];
 
 let fotosPrecargadas = false;
+let limpiezaProgramada = false;
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const ruta = ctx.url.pathname;
@@ -29,6 +32,13 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   if (!fotosPrecargadas) {
     fotosPrecargadas = true;
     precargarFotos([...datos().cols.keys()]).catch(() => { fotosPrecargadas = false; });
+  }
+  if (!limpiezaProgramada) {
+    // fotos subidas que no se usaron en ninguna propuesta: se borran a las 24 h (se mira cada hora)
+    limpiezaProgramada = true;
+    const limpiar = () => limpiarHuerfanos().catch(e => console.error('Limpieza de fotos fallida:', e.message));
+    limpiar();
+    setInterval(limpiar, 60 * 60_000).unref();
   }
   return next();
 });

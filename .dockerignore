@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules
+dist
+.astro
+.git
+.claude
+backups
+legacy
+start.bat
+Dockerfile
+docker-compose.yml

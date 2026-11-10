@@ -1,0 +1,12 @@
+services:
+  santacruzpedia:
+    build: .
+    image: santacruzpedia
+    container_name: santacruzpedia
+    restart: unless-stopped
+    env_file: .env            # PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD (ver .env.example)
+    environment:
+      PORT: 8090              # puerto en el que escucha la app en el servidor
+    # Red del propio servidor: la app se conecta a PostgreSQL igual que si corriera fuera de Docker
+    # (sin tocar pg_hba.conf) y queda accesible en http://<servidor>:8090
+    network_mode: host

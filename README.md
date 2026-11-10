@@ -9,6 +9,20 @@ Wiki del Colegio Mayor Santa Cruz (sede Cardenal Mendoza), hecha con **Astro** y
   - `npm run build` y luego `npm start` — modo normal
 - Las credenciales de la base de datos están en `.env`.
 
+## Desplegar con Docker
+
+En el servidor, con la carpeta del proyecto copiada (sin `node_modules`, `dist` ni `backups`):
+
+1. `cp .env.example .env` y rellena `PGPASSWORD` (entre comillas simples si lleva `$`).
+2. `docker compose up -d --build` — compila la imagen y deja la app en http://<servidor>:8090 (se reinicia sola).
+3. Si es la primera vez y no hay moderador: `docker compose exec santacruzpedia node scripts/crear-moderador.mjs`.
+
+- Actualizar tras cambiar el código: copia los archivos y repite `docker compose up -d --build`.
+- Ver el registro: `docker compose logs -f`. Parar: `docker compose down`.
+- Importar artículos a mano: `docker compose exec santacruzpedia node scripts/importar-articulos.mjs`.
+- Las credenciales van en `.env` y no se copian a la imagen (ver `.dockerignore`).
+- La URL de las fotos (`REMOTE_ASSETS`) se fija al compilar: `docker compose build --build-arg REMOTE_ASSETS=http://otro-servidor`.
+
 ## Cómo funciona un artículo
 
 Cada página `/articulo/<id>` tiene tres partes:

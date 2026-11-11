@@ -173,7 +173,8 @@ button.cargando::before{content:"";width:13px;height:13px;flex:none;border:2px s
 .foto.grande{width:min(560px,100%)}
 .foto-falta{display:inline-block;border:1px dashed var(--new);color:var(--new);padding:4px 8px;font-size:12px;margin:2px 0}
 .marca-pendiente{display:inline-block;margin-top:3px;padding:0 6px;border-radius:8px;background:#fef6e7;color:#8a5a00;border:1px solid #fc3;font-size:11px}
-.galeria-fotos{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:12px 0;padding:0;clear:both}
+/* sin clear: si hay ficha a la derecha, la galería se coloca a su izquierda y ajusta las columnas al hueco */
+.galeria-fotos{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0;padding:0}
 .galeria-fotos li{margin:0;border:1px solid var(--line2);background:var(--bg2);padding:3px;font-size:12px;color:var(--mut);line-height:1.4}
 .galeria-fotos img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
 .galeria-fotos .pie{display:block;padding:4px 2px 1px}

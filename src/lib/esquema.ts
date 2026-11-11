@@ -64,7 +64,8 @@ const AYUDAS: Record<string, string> = {
 };
 /** columnas antiguas de fotos que ya no se usan: las fotos van ahora en la wiki (wiki.archivo, src/lib/archivos.ts).
  *  No salen en los formularios; al añadir quedan vacías y al modificar se conservan como estén. */
-const OCULTAS = new Set(['colegial.foto_perfil', 'colegial.foto_insignia', 'evento.fotosurl']);
+const OCULTAS = new Set(['colegial.foto_perfil', 'colegial.foto_insignia', 'evento.fotosurl',
+  'evento.info']);   // la crónica de un evento se escribe en su artículo (los 6 que la tenían ya la llevan en el texto)
 /** columnas de tipo text que se editan en una caja grande (el resto, como las URLs de fotos, en una línea) */
 const TEXTOS_LARGOS = new Set(['info', 'descripcion', 'observaciones']);
 const humanizar = (s: string) => s.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());

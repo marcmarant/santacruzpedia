@@ -41,6 +41,21 @@ export function fotosDelTexto(contenido: string): string[] {
   return [...nombres];
 }
 
+/**
+ * Texto escrito por alguien en un artículo de evento, en texto plano: sin categorías, bloques, fotos, títulos
+ * de sección ni la frase automática con la que se creó («La X fue un evento celebrado durante el curso…»).
+ * Vacío si nadie ha escrito nada sobre el evento (sirve para saber si tiene crónica y para resumirla).
+ */
+export function textoPropioEvento(contenido: string | null | undefined): string {
+  return (contenido ?? '')
+    .replace(RE_CATEGORIA, '').replace(RE_GALERIA, '').replace(RE_ARCHIVO, '').replace(RE_BLOQUE, '')
+    .replace(/^La \*\*.+?\*\* fue un evento celebrado durante el curso .*?\.\s*$/m, '')
+    .replace(/^#+.*$/gm, '')
+    .replace(RE_ENLACE, (_, titulo: string, visible?: string) => visible ?? titulo)
+    .replace(/[*_`>]|^\s*[-+]\s+/gm, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
 /** enlaces y categorías de un texto (para guardarlos en wiki.enlace y wiki.articulo_categoria al aprobar) */
 export function analizarWikitexto(contenido: string, w: Wiki) {
   const categorias = new Set<string>();

@@ -7,12 +7,14 @@ import { urlArticulo } from '../../../lib/urls';
 import Infobox from '../../infobox/Infobox.astro';
 import Fila from '../../infobox/Fila.astro';
 import Enlace from '../../Enlace.astro';
+import { textoPropioEvento } from '../../../lib/wikitexto';
 
 interface Props { articulo: Articulo; e: Evento; d: Datos; imagen?: Archivo | null }
 const { articulo, e: ev, d } = Astro.props;
 const imagenPrincipal = Astro.props.imagen ?? null;   // foto principal del artículo (sustituye a la de la ficha)
 const dir = d.cursos.get(ev.cursoid)?.director;
-const tieneCronica = !!ev.info || /^##\s*cr[oó]nica/im.test(articulo.contenido ?? '');
+// hay crónica si alguien ha escrito algo en el artículo además de la frase automática con la que se creó
+const tieneCronica = textoPropioEvento(articulo.contenido).length > 0;
 ---
 {!tieneCronica && <div class="ambox">No hay crónica de este evento. ¿Estuviste? Edita el texto desde <a href={`${urlArticulo(articulo.id)}/codigo`}>aquí</a>.</div>}
 <Infobox imagen={imagenPrincipal} titulo={ev.nombre}>

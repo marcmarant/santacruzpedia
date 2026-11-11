@@ -3,6 +3,10 @@ import Wiki from '../layouts/Wiki.astro';
 import Enlace from '../components/Enlace.astro';
 import { datos } from '../lib/estado';
 import BookOpen from '@lucide/astro/icons/book-open';
+import { articuloDe } from '../lib/urls';
+import { textoPropioEvento } from '../lib/wikitexto';
+// tiene crónica si alguien ha escrito algo en su artículo
+const conCronica = (cursoid: string, nombre: string) => textoPropioEvento(articuloDe('evento', `${cursoid}|${nombre}`)?.contenido).length > 0;
 const cursos = [...datos().cursos.values()].filter(c => c.eventos.length).reverse();
 ---
 <Wiki titulo="Eventos">
@@ -10,7 +14,7 @@ const cursos = [...datos().cursos.values()].filter(c => c.eventos.length).revers
   {cursos.map(c => (
     <>
       <h2>{c.id}</h2>
-      <ul>{c.eventos.map(e => <li><Enlace tipo="evento" clave={`${e.cursoid}|${e.nombre}`}>{e.nombre}</Enlace>{e.info && <span title="Tiene crónica"><BookOpen class="cronica" size={15} /></span>}</li>)}</ul>
+      <ul>{c.eventos.map(e => <li><Enlace tipo="evento" clave={`${e.cursoid}|${e.nombre}`}>{e.nombre}</Enlace>{conCronica(e.cursoid, e.nombre) && <span title="Tiene crónica"><BookOpen class="cronica" size={15} /></span>}</li>)}</ul>
     </>
   ))}
 </Wiki>

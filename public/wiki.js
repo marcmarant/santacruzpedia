@@ -195,7 +195,10 @@ document.querySelectorAll('[data-panel-fotos]').forEach(panel => {
       subir.disabled = true; subir.classList.add('cargando'); errores.replaceChildren();
       try {
         const r = await fetch('/archivo/subir', { method: 'POST', body: datos });
-        const res = await r.json().catch(() => ({ errores: [`Error del servidor (${r.status}).`] }));
+        // si no responde la wiki sino algo intermedio (nginx, Cloudflare…), la respuesta no es JSON
+        const res = await r.json().catch(() => ({ errores: [r.status === 413
+          ? `La foto (${(fichero.size / 1024 / 1024).toFixed(1)} MB) es demasiado grande para el servidor. Avisa a un administrador: hay que subir el límite de subida de nginx.`
+          : `Error del servidor (${r.status}). Inténtalo de nuevo en un rato.`] }));
         if (res.archivo) {
           const [, , poner, hecho] = DESTINOS.find(d => d[0] === destino.value);
           poner(res.archivo);

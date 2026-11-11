@@ -8,6 +8,8 @@ import { esNovatoEn } from '../../../lib/datos';
 import { PISOS } from '../../../lib/formato';
 import Enlace from '../../Enlace.astro';
 import Galeria from '../../Galeria.astro';
+import { articuloDe } from '../../../lib/urls';
+import { textoPropioEvento } from '../../../lib/wikitexto';
 
 interface Props { nombre: string; e: Curso; d: Datos }
 const { nombre, e: c, d } = Astro.props;
@@ -45,7 +47,10 @@ const filasCargos = [
   <>
     <h2>Eventos</h2>
     <ul>
-      {c.eventos.map(ev => <li><Enlace tipo="evento" clave={`${ev.cursoid}|${ev.nombre}`}>{ev.nombre}</Enlace>{ev.info && ` — ${resumen(ev.info)}`}</li>)}
+      {c.eventos.map(ev => {
+        const cronica = textoPropioEvento(articuloDe('evento', `${ev.cursoid}|${ev.nombre}`)?.contenido);
+        return <li><Enlace tipo="evento" clave={`${ev.cursoid}|${ev.nombre}`}>{ev.nombre}</Enlace>{cronica && ` — ${resumen(cronica)}`}</li>;
+      })}
     </ul>
   </>
 )}

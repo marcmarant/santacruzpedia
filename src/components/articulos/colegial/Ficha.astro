@@ -24,6 +24,11 @@ const homonimos = [...d.cols.values()].filter(x => x.id !== c.id && norm(x.mote)
 // esbozo: faltan datos y nadie ha escrito todavía un texto largo
 const textoLargo = (articulo.contenido?.length ?? 0) > 800;
 const esEsbozo = (!c.nombre || !c.procedencia || !c.estancias.length) && !textoLargo;
+// años que estuvo: del primer año de su primer curso al segundo de su último («2019-2020» y «2022-2023» → «2019-2023»)
+const periodo = (primero: string, ultimo: string) => {
+  const ini = primero.split('-')[0], fin = ultimo.split('-')[1];
+  return ini && fin ? `${ini}-${fin}` : `${primero} – ${ultimo}`;
+};
 const promo = (x: Colegial) => x.promo ? String(x.promo) : 'promoción desconocida';
 ---
 {homonimos.length > 0 && (
@@ -48,7 +53,7 @@ const promo = (x: Colegial) => x.promo ? String(x.promo) : 'promoción desconoci
   <Seccion titulo="Vida colegial" />
   <Fila e="Promoción" v={c.promo} />
   <Fila e="Estado" v={esActual ? 'Colegial actual' : c.estancias.length ? 'Antiguo colegial' : null} />
-  <Fila e="Cursos" v={ultima ? `${c.estancias[0].curso} – ${ultima.curso} (${c.estancias.length})` : null} />
+  <Fila e="Cursos" v={ultima ? `${periodo(c.estancias[0].curso, ultima.curso)} (${c.estancias.length})` : null} />
   <Fila e="Habitación" si={ultima?.hab != null}><Enlace tipo="habitacion" clave={ultima?.hab}>Habitación {ultima?.hab}</Enlace></Fila>
   <Fila e="Estudios" si={estudios.length > 0}>
     {estudios.map((x, i) => <>{i > 0 && <br />}<Enlace tipo="estudio" clave={x}>{d.estudios.get(x)?.nombre}</Enlace></>)}
